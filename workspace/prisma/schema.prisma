@@ -1,0 +1,105 @@
+// prisma/schema.prisma
+datasource db {
+  provider  = "mongodb"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  USER
+}
+
+type teacherInfo {
+  subject String
+}
+
+model User {
+  id                    String                 @id @default(uuid()) @map("_id")
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  description           String?
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  isTwoFactorEnabled    Boolean                @default(false)
+  twoFactorConfirmation TwoFactorConfirmation?
+  subjects              UserSubject[]
+  timings               Json?
+  website               String?
+  address               String?
+  experience            String?
+  specialization        String?
+  phone                 String?
+  Timetable             Timetable[]
+}
+
+model UserSubject {
+  id        String  @id @default(uuid()) @map("_id")
+  userId    String
+  subjectId String
+  user      User    @relation(fields: [userId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+}
+
+model Subject {
+  id        String        @id @default(uuid()) @map("_id")
+  name      String
+  code      String
+  users     UserSubject[]
+  Timetable Timetable[]
+}
+
+model VerificationToken {
+  id      String   @id @default(uuid()) @map("_id")
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(uuid()) @map("_id")
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorToken {
+  id      String   @id @default(uuid()) @map("_id")
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorConfirmation {
+  id     String @id @default(uuid()) @map("_id")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId])
+}
+
+model Timetable {
+  id        String   @id @default(uuid()) @map("_id")
+  userId    String
+  subjectId String
+  day       String
+  startTime DateTime
+  endTime   DateTime
+  user      User     @relation(fields: [userId], references: [id])
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+
+  @@index([userId, subjectId, day, startTime], name: "timetable_index")
+}
