@@ -1,233 +1,229 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cstdlib>
+#include <ctime>
 #include <map>
+#include <iomanip>
+#include <algorithm>
 
-struct Faculty
-{
+class Subject {
+public:
     std::string name;
-    std::vector<std::string> subjects;
+
+    Subject(const std::string& name) : name(name) {}
 };
 
-struct TimeSlot
-{
-    int day;  // 0 to 4 for Monday to Friday
-    int hour; // 0 to 6 for 8:30 to 3:30 with intervals
-};
+class Teacher {
+public:
+    std::string name;
+    std::vector<Subject> subjects;
 
-struct Class
-{
-    std::string subject;
-    std::string faculty;
-    std::string classroom;
-    TimeSlot timeSlot;
-};
+    Teacher(const std::string& name) : name(name) {}
 
-std::vector<Faculty> inputFaculties()
-{
-    std::vector<Faculty> faculties;
-    faculties.push_back({"Dr. Smith", {"Math", "Physics"}});
-    faculties.push_back({"Ms. Johnson", {"Chemistry", "Biology"}});
-    // Add more faculties as needed
-    return faculties;
-}
+    void addSubject(const Subject& subject) {
+        subjects.push_back(subject);
+    }
 
-std::vector<std::string> inputClassrooms()
-{
-    return {"Room 101", "Room 102", "Room 103"};
-}
-
-bool isTimeSlotAvailable(const std::vector<Class> &schedule, const TimeSlot &timeSlot, const std::string &classroom)
-{
-    for (const auto &cls : schedule)
-    {
-        if (cls.timeSlot.day == timeSlot.day && cls.timeSlot.hour == timeSlot.hour && cls.classroom == classroom)
-        {
-            return false;
+    void displaySubjects() const {
+        std::cout << "Subjects taught by " << name << ":\n";
+        for (const auto& subject : subjects) {
+            std::cout << "- " << subject.name << '\n';
         }
     }
-    return true;
+};
+
+class Section {
+public:
+    std::string name;
+    std::vector<Teacher> teachers;
+
+    Section(const std::string& name) : name(name) {}
+
+    void addTeacher(const Teacher& teacher) {
+        teachers.push_back(teacher);
+    }
+
+    void displayInfo() const {
+        std::cout << "Section " << name << ":\n";
+        for (const auto& teacher : teachers) {
+            teacher.displaySubjects();
+        }
+        std::cout << '\n';
+    }
+};
+
+class Year {
+public:
+    int yearNumber;
+    std::vector<Section> sections;
+
+    Year(int yearNumber, const std::vector<Section>& sections) : yearNumber(yearNumber), sections(sections) {}
+
+    void displayInfo() const {
+        std::cout << "Year " << yearNumber << ":\n";
+        for (const auto& section : sections) {
+            section.displayInfo();
+        }
+    }
+};
+
+class Timetable {
+public:
+    struct ScheduledClass {
+        std::string timeSlot;
+        Teacher teacher;
+        Subject subject;
+        Section section;
+    };
+
+    std::map<std::string, std::vector<ScheduledClass>> schedule;
+
+    void addClass(const std::string& timeSlot, const Teacher& teacher, const Subject& subject, const Section& section) {
+        schedule[section.name].push_back({ timeSlot, teacher, subject, section });
+    }
+
+    void displayTimetable() const {
+        for (const auto& entry : schedule) {
+            std::cout << "Section: " << entry.first << '\n';
+            std::cout << std::left << std::setw(15) << "Time"
+                      << std::setw(20) << "Teacher"
+                      << std::setw(25) << "Subject" << '\n';
+            std::cout << std::string(60, '-') << '\n';
+
+            // Sort classes by time slot for proper display
+            std::vector<ScheduledClass> sortedClasses = entry.second;
+            std::sort(sortedClasses.begin(), sortedClasses.end(), [](const ScheduledClass& a, const ScheduledClass& b) {
+                return a.timeSlot < b.timeSlot;
+            });
+
+            for (const auto& scheduledClass : sortedClasses) {
+                std::cout << std::left << std::setw(15) << scheduledClass.timeSlot
+                          << std::setw(20) << scheduledClass.teacher.name
+                          << std::setw(25) << scheduledClass.subject.name << '\n';
+            }
+            std::cout << '\n';
+        }
+    }
+};
+
+std::vector<std::string> generateTimeSlots() {
+    return { "09:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-01:00", "01:00-02:00", "02:00-03:00", "03:00-04:00" };
 }
 
-std::vector<Class> generateSchedule(const std::vector<Faculty> &faculties, const std::vector<std::string> &classrooms)
-{
-    std::vector<Class> schedule;
-    int hoursPerDay = 7; // 8:30 to 3:30 with intervals (6 periods)
-    for (const auto &faculty : faculties)
-    {
-        for (const auto &subject : faculty.subjects)
-        {
-            for (int day = 0; day < 5; ++day)
-            { // Monday to Friday
-                for (int hour = 0; hour < hoursPerDay; ++hour)
-                {
-                    if ((hour + 1) % 3 == 0)
-                        continue; // Skip interval hours
-                    TimeSlot timeSlot = {day, hour};
-                    for (const auto &classroom : classrooms)
-                    {
-                        if (isTimeSlotAvailable(schedule, timeSlot, classroom))
-                        {
-                            schedule.push_back({subject, faculty.name, classroom, timeSlot});
-                            goto nextSubject; // Break out of the nested loop
-                        }
+void generateTimetable(Year& year, const std::vector<Subject>& subjects, Timetable& timetable, std::map<std::string, std::map<std::string, bool>>& teacherAvailability, std::map<std::string, std::map<std::string, bool>>& sectionAvailability) {
+    std::vector<std::string> timeSlots = generateTimeSlots();
+
+    for (const auto& section : year.sections) {
+        std::map<std::string, bool> assignedSubjects;
+
+        for (const auto& timeSlot : timeSlots) {
+            bool classAssigned = false;
+
+            if (sectionAvailability[section.name][timeSlot]) {
+                continue; // Skip if the section is already assigned in this time slot
+            }
+
+            for (const auto& teacher : section.teachers) {
+                if (teacherAvailability[teacher.name][timeSlot]) {
+                    continue; // Skip if the teacher is already assigned in this time slot
+                }
+
+                for (const auto& subject : teacher.subjects) {
+                    if (!assignedSubjects[subject.name]) {
+                        timetable.addClass(timeSlot, teacher, subject, section);
+                        assignedSubjects[subject.name] = true;
+                        teacherAvailability[teacher.name][timeSlot] = true;
+                        sectionAvailability[section.name][timeSlot] = true;
+                        classAssigned = true;
+                        break;
                     }
                 }
-            nextSubject:;
+                if (classAssigned) {
+                    break; // Break out of the teacher loop once a class is assigned for this time slot
+                }
             }
         }
     }
-    return schedule;
 }
 
-void printSchedule(const std::vector<Class> &schedule)
-{
-    std::map<int, std::string> days = {{0, "Monday"}, {1, "Tuesday"}, {2, "Wednesday"}, {3, "Thursday"}, {4, "Friday"}};
-    std::map<int, std::string> hours = {
-        {0, "8:30-9:30"}, {1, "9:30-10:30"}, {2, "10:30-11:30"}, {3, "11:30-12:30"}, {4, "12:30-1:30"}, {5, "1:30-2:30"}, {6, "2:30-3:30"}};
+int main() {
+    std::srand(std::time(nullptr));
 
-    for (const auto &cls : schedule)
-    {
-        std::cout << "Day: " << days[cls.timeSlot.day] << ", Hour: " << hours[cls.timeSlot.hour]
-                  << ", Subject: " << cls.subject << ", Faculty: " << cls.faculty << ", Classroom: " << cls.classroom << std::endl;
-    }
-}
+    // Predefined subjects
+    std::vector<Subject> subjects = {
+        Subject("Data Structures"), Subject("Algorithms"), Subject("Database Systems"),
+        Subject("Operating Systems"), Subject("Computer Networks"), Subject("Software Engineering"),
+        Subject("Artificial Intelligence"), Subject("Machine Learning"), Subject("Computer Graphics"),
+        Subject("Web Development"), Subject("Mobile App Development"), Subject("Cloud Computing"),
+        Subject("Cyber Security"), Subject("Big Data"), Subject("Blockchain Technology"),
+        Subject("Internet of Things"), Subject("Human-Computer Interaction"), Subject("Robotics"),
+        Subject("Embedded Systems"), Subject("Natural Language Processing"), Subject("Quantum Computing"),
+        Subject("Bioinformatics"), Subject("Digital Signal Processing"), Subject("Game Development"),
+        Subject("Virtual Reality")
+    };
 
-void printDaySchedule(const std::vector<Class> &schedule, int day)
-{
-    std::map<int, std::string> days = {{0, "Monday"}, {1, "Tuesday"}, {2, "Wednesday"}, {3, "Thursday"}, {4, "Friday"}};
-    std::map<int, std::string> hours = {
-        {0, "8:30-9:30"}, {1, "9:30-10:30"}, {2, "10:30-11:30"}, {3, "11:30-12:30"}, {4, "12:30-1:30"}, {5, "1:30-2:30"}, {6, "2:30-3:30"}};
+    // Predefined teachers
+    std::vector<Teacher> teachers = {
+        Teacher("Dr. Smith"), Teacher("Prof. Johnson"), Teacher("Dr. Brown"), Teacher("Prof. Taylor"),
+        Teacher("Dr. Anderson"), Teacher("Prof. Thomas"), Teacher("Dr. Jackson"), Teacher("Prof. White"),
+        Teacher("Dr. Harris"), Teacher("Prof. Martin"), Teacher("Dr. Thompson"), Teacher("Prof. Garcia"),
+        Teacher("Dr. Martinez"), Teacher("Prof. Robinson"), Teacher("Dr. Clark")
+    };
 
-    std::cout << "Timetable for " << days[day] << ":\n";
-    for (const auto &cls : schedule)
-    {
-        if (cls.timeSlot.day == day)
-        {
-            std::cout << "Hour: " << hours[cls.timeSlot.hour] << ", Subject: " << cls.subject
-                      << ", Faculty: " << cls.faculty << ", Classroom: " << cls.classroom << std::endl;
+    // Assign subjects to teachers randomly
+    for (auto& teacher : teachers) {
+        int numSubjects = rand() % 3 + 1;  // Each teacher teaches at least 1 subject, up to 3 subjects
+        for (int i = 0; i < numSubjects; ++i) {
+            int subjectIndex = rand() % subjects.size();
+            teacher.addSubject(subjects[subjectIndex]);
         }
     }
-}
 
-void printClassSchedule(const std::vector<Class> &schedule, const std::string &classroom)
-{
-    std::map<int, std::string> days = {{0, "Monday"}, {1, "Tuesday"}, {2, "Wednesday"}, {3, "Thursday"}, {4, "Friday"}};
-    std::map<int, std::string> hours = {
-        {0, "8:30-9:30"}, {1, "9:30-10:30"}, {2, "10:30-11:30"}, {3, "11:30-12:30"}, {4, "12:30-1:30"}, {5, "1:30-2:30"}, {6, "2:30-3:30"}};
-
-    std::cout << "Timetable for " << classroom << ":\n";
-    for (const auto &cls : schedule)
-    {
-        if (cls.classroom == classroom)
-        {
-            std::cout << "Day: " << days[cls.timeSlot.day] << ", Hour: " << hours[cls.timeSlot.hour]
-                      << ", Subject: " << cls.subject << ", Faculty: " << cls.faculty << std::endl;
+    // Create sections for each year
+    std::vector<Year> years;
+    for (int yearNumber = 1; yearNumber <= 4; ++yearNumber) {
+        std::vector<Section> sections;
+        for (char sectionName = 'A'; sectionName <= 'C'; ++sectionName) {
+            sections.emplace_back(Section(std::string(1, sectionName)));
         }
+        years.emplace_back(Year(yearNumber, sections));
     }
-}
 
-void printFaculties(const std::vector<Faculty> &faculties)
-{
-    for (const auto &faculty : faculties)
-    {
-        std::cout << "Faculty: " << faculty.name << std::endl;
-        std::cout << "Subjects: ";
-        for (const auto &subject : faculty.subjects)
-        {
-            std::cout << subject << " ";
-        }
-        std::cout << std::endl;
-    }
-}
-
-void printFacultySchedule(const std::vector<Class> &schedule, const std::string &facultyName)
-{
-    std::map<int, std::string> days = {{0, "Monday"}, {1, "Tuesday"}, {2, "Wednesday"}, {3, "Thursday"}, {4, "Friday"}};
-    std::map<int, std::string> hours = {
-        {0, "8:30-9:30"}, {1, "9:30-10:30"}, {2, "10:30-11:30"}, {3, "11:30-12:30"}, {4, "12:30-1:30"}, {5, "1:30-2:30"}, {6, "2:30-3:30"}};
-
-    for (const auto &cls : schedule)
-    {
-        if (cls.faculty == facultyName)
-        {
-            std::cout << "Subject: " << cls.subject << ", Day: " << days[cls.timeSlot.day]
-                      << ", Hour: " << hours[cls.timeSlot.hour] << ", Classroom: " << cls.classroom << std::endl;
-        }
-    }
-}
-
-void displayMenu()
-{
-    std::cout << "Menu:\n";
-    std::cout << "1. Generate Timetable\n";
-    std::cout << "2. Show List of All Faculties with Their Details\n";
-    std::cout << "3. Show Subjects and Time Slots for a Specific Teacher\n";
-    std::cout << "4. Show Timetable for a Specific Day\n";
-    std::cout << "5. Show Timetable for a Specific Class\n";
-    std::cout << "6. Exit\n";
-    std::cout << "Enter your choice: ";
-}
-
-int main()
-{
-    std::vector<Faculty> faculties = inputFaculties();
-    std::vector<std::string> classrooms = inputClassrooms();
-    std::vector<Class> schedule = generateSchedule(faculties, classrooms);
-
-    while (true)
-    {
-        displayMenu();
-        int choice;
-        std::cin >> choice;
-
-        if (choice == 1)
-        {
-            printSchedule(schedule);
-        }
-        else if (choice == 2)
-        {
-            printFaculties(faculties);
-        }
-        else if (choice == 3)
-        {
-            std::cout << "Enter the name of the faculty: ";
-            std::string facultyName;
-            std::cin.ignore(); // to clear the newline character from the buffer
-            std::getline(std::cin, facultyName);
-            printFacultySchedule(schedule, facultyName);
-        }
-        else if (choice == 4)
-        {
-            std::cout << "Enter the day (0 for Monday, 1 for Tuesday, ..., 4 for Friday): ";
-            int day;
-            std::cin >> day;
-            if (day >= 0 && day <= 4)
-            {
-                printDaySchedule(schedule, day);
-            }
-            else
-            {
-                std::cout << "Invalid day. Please enter a number between 0 and 4.\n";
+    // Assign teachers to sections
+    int teacherIndex = 0;
+    for (auto& year : years) {
+        for (auto& section : year.sections) {
+            int numTeachers = rand() % 5 + 5;  // Each section has 5-9 teachers
+            for (int i = 0; i < numTeachers; ++i) {
+                section.addTeacher(teachers[teacherIndex % teachers.size()]);
+                teacherIndex++;
             }
         }
-        else if (choice == 5)
-        {
-            std::cout << "Enter the class (classroom): ";
-            std::string classroom;
-            std::cin.ignore(); // to clear the newline character from the buffer
-            std::getline(std::cin, classroom);
-            printClassSchedule(schedule, classroom);
-        }
-        else if (choice == 6)
-        {
-            break;
-        }
-        else
-        {
-            std::cout << "Invalid choice. Please try again.\n";
+    }
+
+    // Initialize teacher and section availability maps
+    std::map<std::string, std::map<std::string, bool>> teacherAvailability;
+    std::map<std::string, std::map<std::string, bool>> sectionAvailability;
+    for (const auto& teacher : teachers) {
+        for (const auto& timeSlot : generateTimeSlots()) {
+            teacherAvailability[teacher.name][timeSlot] = false;
         }
     }
+    for (const auto& year : years) {
+        for (const auto& section : year.sections) {
+            for (const auto& timeSlot : generateTimeSlots()) {
+                sectionAvailability[section.name][timeSlot] = false;
+            }
+        }
+    }
+
+    // Generate and display timetable
+    Timetable timetable;
+    for (auto& year : years) {
+        generateTimetable(year, subjects, timetable, teacherAvailability, sectionAvailability);
+    }
+    timetable.displayTimetable();
 
     return 0;
 }

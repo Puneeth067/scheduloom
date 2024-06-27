@@ -92,14 +92,12 @@ model TwoFactorConfirmation {
 }
 
 model Timetable {
-  id        String   @id @default(uuid()) @map("_id")
-  userId    String
+  id        String  @id @default(uuid()) @map("_id")
   subjectId String
-  day       String
-  startTime DateTime
-  endTime   DateTime
-  user      User     @relation(fields: [userId], references: [id])
-  subject   Subject  @relation(fields: [subjectId], references: [id])
-
-  @@index([userId, subjectId, day, startTime], name: "timetable_index")
+  facultyId String
+  classroom String
+  day       Int // 0 to 4 for Monday to Friday
+  hour      Int // 0 to 6 for 8:30 to 3:30 with intervals
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  faculty   User    @relation(fields: [facultyId], references: [id])
 }
