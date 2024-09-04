@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Scheduler</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            text-align: center;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Generated Timetable</h1>
+        <div id="timetable"></div>
+        <h2>Remaining Lectures</h2>
+        <div id="remaining-lectures"></div>
+        <h2>Best Timetable Found (Genetic Algorithm)</h2>
+        <div id="best-timetable"></div>
+    </div>
+    <script src="'./app.js"></script>
+</body>
+
+</html>
