@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timetable</title>
+    <title>Teacher Timetable</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -41,8 +41,8 @@
 </head>
 
 <body>
-    <h1>Class Timetable</h1>
-    <div id="timetable"></div>
+    <h1>Teacher Timetable</h1>
+    <div id="teacher-timetable"></div>
 
     <script>
         class TimetableGA {
@@ -92,7 +92,6 @@
             }
 
             isSchedulePossible(classIndex, day, periodIndex, teacherName, schedule) {
-                // Check if the teacher is already scheduled for another class in the same period
                 for (let otherClassIndex = 0; otherClassIndex < this.classes.length; otherClassIndex++) {
                     if (otherClassIndex !== classIndex && schedule[otherClassIndex][day][periodIndex] === teacherName) {
                         return false;
@@ -119,8 +118,6 @@
 
             calculateFitness(schedule) {
                 let fitness = 0;
-
-                // Add fitness for no conflicts (teachers/classes with no overlaps)
                 for (let day = 0; day < period.d; day++) {
                     for (let per = 0; per < period.p; per++) {
                         let teacherSet = new Set();
@@ -136,13 +133,10 @@
                         }
                     }
                 }
-
-                // Check if the number of lectures assigned matches the requirements
                 for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
                     let remainingLectures = this.getRemainingLecturesForClass(cIndex);
                     fitness += remainingLectures === 0 ? 50 : -20 * remainingLectures;
                 }
-
                 return fitness;
             }
 
@@ -158,7 +152,6 @@
                 const offspring = Array.from({ length: this.classes.length }, (_, cIndex) =>
                     cIndex < crossoverPoint ? parent1[cIndex] : parent2[cIndex]
                 );
-
                 return offspring;
             }
 
@@ -166,24 +159,18 @@
                 const classIndex = Math.floor(Math.random() * this.classes.length);
                 const dayIndex = Math.floor(Math.random() * period.d);
                 const periodIndex = Math.floor(Math.random() * period.p);
-
-                // Randomly assign a new teacher to a period
                 const teacher = this.getRandomTeacher(classIndex);
                 if (this.isSchedulePossible(classIndex, dayIndex, periodIndex, teacher.name, schedule)) {
                     schedule[classIndex][dayIndex][periodIndex] = teacher.name;
                 }
-
                 return schedule;
             }
 
             run() {
                 this.initializePopulation();
-
                 for (let generation = 0; generation < this.maxGenerations; generation++) {
                     let parents = this.selectParents();
                     let newPopulation = [];
-
-                    // Create offspring through crossover
                     for (let i = 0; i < parents.length; i++) {
                         for (let j = i + 1; j < parents.length; j++) {
                             let offspring = this.crossover(parents[i], parents[j]);
@@ -193,25 +180,18 @@
                             newPopulation.push(offspring);
                         }
                     }
-
                     this.population = newPopulation;
-
-                    // Track the best schedule
                     this.bestSchedule = this.population.reduce((best, schedule) =>
                         this.calculateFitness(schedule) > this.calculateFitness(best) ?
                             schedule :
                             best
                     );
-
-                    // Log the progress
                     console.log(`Generation ${generation + 1}: Best Fitness = ${this.calculateFitness(this.bestSchedule)}`);
                 }
-
                 return this.bestSchedule;
             }
         }
 
-        // Sample data
         const c = ["c1", "c2", "c3"];
         const s = [
             { name: "s1", creditHr: 3 },
@@ -273,21 +253,41 @@
 
         // Generate and display the timetable in HTML
         function generateTable(schedule) {
-            let html = '<table><thead><tr><th>Class</th>';
+            let teachers = [];
+            schedule.forEach((classSchedule, classIndex) => {
+                classSchedule.forEach(daySchedule => {
+                    daySchedule.forEach((teacher, periodIndex) => {
+                        if (teacher !== 0 && !teachers.includes(teacher)) {
+                            teachers.push(teacher);
+                        }
+                    });
+                });
+            });
+
+            let html = '<table><thead><tr><th>Teacher</th>';
             for (let day = 1; day <= period.d; day++) {
                 html += `<th>Day ${day}</th>`;
             }
             html += '</tr></thead><tbody>';
 
-            schedule.forEach((classSchedule, classIndex) => {
-                html += `<tr><td>Class ${classIndex + 1}</td>`;
-                classSchedule.forEach(daySchedule => {
+            teachers.forEach(teacher => {
+                html += `<tr><td>${teacher}</td>`;
+                for (let day = 0; day < period.d; day++) {
                     html += `<td><table class="inner-table">`;
-                    daySchedule.forEach((teacher, periodIndex) => {
-                        html += `<tr><td>Period ${periodIndex + 1}: ${teacher}</td></tr>`;
-                    });
+                    for (let periodIndex = 0; periodIndex < period.p; periodIndex++) {
+                        let found = false;
+                        schedule.forEach((classSchedule, classIndex) => {
+                            if (classSchedule[day][periodIndex] === teacher) {
+                                html += `<tr><td>Class ${classIndex + 1} Period ${periodIndex + 1}</td></tr>`;
+                                found = true;
+                            }
+                        });
+                        if (!found) {
+                            html += `<tr><td>Free</td></tr>`;
+                        }
+                    }
                     html += `</table></td>`;
-                });
+                }
                 html += '</tr>';
             });
 
@@ -295,7 +295,7 @@
             return html;
         }
 
-        document.getElementById('timetable').innerHTML = generateTable(bestSchedule);
+        document.getElementById('teacher-timetable').innerHTML = generateTable(bestSchedule);
     </script>
 </body>
 
