@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Timetable with Constraints</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .inner-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .inner-table td {
+            border: none;
+            padding: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Teacher Timetable with Constraints</h1>
+    <div id="teacher-timetable"></div>
+
+    <script>
+        class TimetableGA {
+            constructor(classes, subjects, teachers, populationSize, maxGenerations) {
+                this.classes = classes;
+                this.subjects = subjects;
+                this.teachers = teachers;
+                this.populationSize = populationSize;
+                this.maxGenerations = maxGenerations;
+                this.population = [];
+                this.bestSchedule = null;
+            }
+
+            initializePopulation() {
+                for (let i = 0; i < this.populationSize; i++) {
+                    const schedule = this.generateRandomSchedule();
+                    this.population.push(schedule);
+                }
+            }
+
+            generateRandomSchedule() {
+                let schedule = Array.from({ length: this.classes.length }, () =>
+                    Array.from({ length: period.d }, () =>
+                        Array(period.p).fill(0)
+                    )
+                );
+
+                // Randomly assign subjects to periods for each class
+                for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
+                    let remainingLectures = this.getRemainingLecturesForClass(cIndex);
+                    for (let day = 0; day < period.d; day++) {
+                        for (let per = 0; per < period.p; per++) {
+                            if (schedule[cIndex][day][per] === 0 && remainingLectures > 0) {
+                                let teacher = this.getRandomTeacher(cIndex, day, per);
+                                if (teacher) {
+                                    if (this.isSchedulePossible(cIndex, day, per, teacher.name, schedule)) {
+                                        schedule[cIndex][day][per] = teacher.name;
+                                        remainingLectures--;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return schedule;
+            }
+
+            getRandomTeacher(cIndex, day, per) {
+                const eligibleTeachers = this.teachers.filter(teacher =>
+                    teacher.assigned.some(e => e.class === this.classes[cIndex])
+                ).filter(teacher =>
+                    !teacher.constraints.some(constraint =>
+                        constraint.day === day && constraint.start <= per && constraint.end >= per
+                    )
+                );
+                return eligibleTeachers.length > 0 ? eligibleTeachers[Math.floor(Math.random() * eligibleTeachers.length)] : null;
+            }
+
+            isSchedulePossible(classIndex, day, periodIndex, teacherName, schedule) {
+                // Ensure that no other class is taught by the same teacher in the same period
+                for (let otherClassIndex = 0; otherClassIndex < this.classes.length; otherClassIndex++) {
+                    if (otherClassIndex !== classIndex && schedule[otherClassIndex][day][periodIndex] === teacherName) {
+                        return false;
+                    }
+                }
+                // Ensure that the class doesn't have multiple teachers in the same period
+                return !schedule[classIndex][day].includes(teacherName);
+            }
+
+            getRemainingLecturesForClass(cIndex) {
+                let totalLectures = 0;
+                this.teachers.forEach(teacher => {
+                    let valid = teacher.assigned.find(e => e.class === this.classes[cIndex]);
+                    if (valid) totalLectures += valid.subject.creditHr;
+                });
+                return totalLectures;
+            }
+
+            calculateFitness(schedule) {
+                let fitness = 0;
+                for (let day = 0; day < period.d; day++) {
+                    for (let per = 0; per < period.p; per++) {
+                        let teacherSet = new Set();
+                        for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
+                            const teacher = schedule[cIndex][day][per];
+                            if (teacher !== 0) {
+                                if (teacherSet.has(teacher)) {
+                                    fitness -= 10; // Conflict penalty
+                                } else {
+                                    teacherSet.add(teacher);
+                                }
+                            }
+                        }
+                    }
+                }
+                for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
+                    let remainingLectures = this.getRemainingLecturesForClass(cIndex);
+                    fitness += remainingLectures === 0 ? 50 : -20 * remainingLectures;
+                }
+                return fitness;
+            }
+
+            selectParents() {
+                const sortedPopulation = this.population.sort(
+                    (a, b) => this.calculateFitness(b) - this.calculateFitness(a)
+                );
+                return sortedPopulation.slice(0, this.populationSize / 2); // Top 50% parents
+            }
+
+            crossover(parent1, parent2) {
+                const crossoverPoint = Math.floor(Math.random() * this.classes.length);
+                const offspring = Array.from({ length: this.classes.length }, (_, cIndex) =>
+                    cIndex < crossoverPoint ? parent1[cIndex] : parent2[cIndex]
+                );
+                return offspring;
+            }
+
+            mutate(schedule) {
+                const classIndex = Math.floor(Math.random() * this.classes.length);
+                const dayIndex = Math.floor(Math.random() * period.d);
+                const periodIndex = Math.floor(Math.random() * period.p);
+                const teacher = this.getRandomTeacher(classIndex, dayIndex, periodIndex);
+                if (teacher && this.isSchedulePossible(classIndex, dayIndex, periodIndex, teacher.name, schedule)) {
+                    schedule[classIndex][dayIndex][periodIndex] = teacher.name;
+                }
+                return schedule;
+            }
+
+            run() {
+                this.initializePopulation();
+                for (let generation = 0; generation < this.maxGenerations; generation++) {
+                    let parents = this.selectParents();
+                    let newPopulation = [];
+                    for (let i = 0; i < parents.length; i++) {
+                        for (let j = i + 1; j < parents.length; j++) {
+                            let offspring = this.crossover(parents[i], parents[j]);
+                            if (Math.random() < 0.1) {
+                                offspring = this.mutate(offspring); // Apply mutation with 10% probability
+                            }
+                            newPopulation.push(offspring);
+                        }
+                    }
+                    this.population = newPopulation;
+                    this.bestSchedule = this.population.reduce((best, schedule) =>
+                        this.calculateFitness(schedule) > this.calculateFitness(best) ?
+                            schedule :
+                            best
+                    );
+                    console.log(`Generation ${generation + 1}: Best Fitness = ${this.calculateFitness(this.bestSchedule)}`);
+                }
+                return this.bestSchedule;
+            }
+        }
+
+        const c = ["c1", "c2", "c3"];
+        const s = [
+            { name: "s1", creditHr: 3 },
+            { name: "s2", creditHr: 3 },
+            { name: "s3", creditHr: 3 },
+            { name: "s4", creditHr: 3 },
+            { name: "s5", creditHr: 3 },
+            { name: "s6", creditHr: 2 }
+        ];
+        const t = [
+            {
+                name: "t0", assigned: [
+                    { class: c[0], subject: s[0], lecture: [1, 1, 1] },
+                    { class: c[1], subject: s[0], lecture: [1, 1, 1] },
+                    { class: c[2], subject: s[0], lecture: [1, 1, 1] }
+                ], constraints: [
+                    { day: 1, start: 0, end: 3 }, // Available on Day 2 from 9:00 to 12:30
+                    { day: 2, start: 0, end: 3 }
+                ]
+            },
+            {
+                name: "t1", assigned: [
+                    { class: c[0], subject: s[1], lecture: [1, 1, 1] },
+                    { class: c[1], subject: s[1], lecture: [1, 1, 1] },
+                    { class: c[2], subject: s[1], lecture: [1, 1, 1] }
+                ], constraints: []
+            },
+            {
+                name: "t2", assigned: [
+                    { class: c[0], subject: s[2], lecture: [2, 1] },
+                    { class: c[1], subject: s[2], lecture: [2, 1] },
+                    { class: c[2], subject: s[2], lecture: [2, 1] }
+                ], constraints: []
+            },
+            {
+                name: "t3", assigned: [
+                    { class: c[0], subject: s[3], lecture: [1, 1, 1] },
+                    { class: c[1], subject: s[3], lecture: [1, 1, 1] },
+                    { class: c[2], subject: s[3], lecture: [1, 1, 1] }
+                ], constraints: []
+            },
+            {
+                name: "t4", assigned: [
+                    { class: c[0], subject: s[4], lecture: [1, 1, 1] },
+                    { class: c[1], subject: s[4], lecture: [1, 1, 1] },
+                    { class: c[2], subject: s[4], lecture: [1, 1, 1] }
+                ], constraints: []
+            },
+            {
+                name: "t5", assigned: [
+                    { class: c[0], subject: s[5], lecture: [1, 1, 1] },
+                    { class: c[1], subject: s[5], lecture: [1, 1, 1] },
+                    { class: c[2], subject: s[5], lecture: [1, 1, 1] }
+                ], constraints: []
+            }
+        ];
+
+        const period = { d: 5, p: 7 };
+        const ga = new TimetableGA(c, s, t, 10, 100);
+        const bestSchedule = ga.run();
+
+        function generateTable(schedule) {
+            let teachers = [];
+            schedule.forEach(classSchedule => {
+                classSchedule.forEach(daySchedule => {
+                    daySchedule.forEach(teacher => {
+                        if (teacher !== 0 && !teachers.includes(teacher)) {
+                            teachers.push(teacher);
+                        }
+                    });
+                });
+            });
+
+            let html = '<table><thead><tr><th>Teacher</th>';
+            for (let day = 1; day <= period.d; day++) {
+                html += `<th>Day ${day}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            teachers.forEach(teacher => {
+                html += `<tr><td>${teacher}</td>`;
+                for (let day = 0; day < period.d; day++) {
+                    html += `<td><table class="inner-table">`;
+                    for (let periodIndex = 0; periodIndex < period.p; periodIndex++) {
+                        let found = false;
+                        schedule.forEach((classSchedule, classIndex) => {
+                            if (classSchedule[day][periodIndex] === teacher) {
+                                html += `<tr><td>Class ${classIndex + 1} Period ${periodIndex + 1}</td></tr>`;
+                                found = true;
+                            }
+                        });
+                        if (!found) {
+                            html += `<tr><td>Free</td></tr>`;
+                        }
+                    }
+                    html += `</table></td>`;
+                }
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        document.getElementById('teacher-timetable').innerHTML = generateTable(bestSchedule);
+    </script>
+</body>
+
+</html>
