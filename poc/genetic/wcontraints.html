@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Timetable with Constraints</title>
+    <title>Optimized Teacher Timetable</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -37,15 +37,103 @@
             border: none;
             padding: 4px;
         }
+
+        .form-container {
+            margin-bottom: 20px;
+        }
+
+        .form-container input,
+        .form-container select {
+            margin: 10px;
+            padding: 5px;
+        }
     </style>
 </head>
 
 <body>
-    <h1>Teacher Timetable with Constraints</h1>
+    <h1>Optimized Teacher Timetable</h1>
+
+    <!-- Form for inputting data -->
+    <div class="form-container">
+        <h3>Add Class</h3>
+        <input type="text" id="className" placeholder="Class Name" />
+        <button onclick="addClass()">Add Class</button>
+
+        <h3>Add Subject</h3>
+        <input type="text" id="subjectName" placeholder="Subject Name" />
+        <input type="number" id="creditHours" placeholder="Credit Hours" />
+        <button onclick="addSubject()">Add Subject</button>
+
+        <h3>Add Teacher</h3>
+        <input type="text" id="teacherName" placeholder="Teacher Name" />
+        <select id="assignClass">
+            <option value="" disabled selected>Select Class</option>
+        </select>
+        <select id="assignSubject">
+            <option value="" disabled selected>Select Subject</option>
+        </select>
+        <button onclick="addTeacher()">Add Teacher</button>
+    </div>
+
+    <button onclick="generateTimetable()">Generate Timetable</button>
+
     <div id="teacher-timetable"></div>
 
     <script>
-        class TimetableGA {
+        let classes = [];
+        let subjects = [];
+        let teachers = [];
+        const period = { d: 5, p: 7 }; // Days and periods in a week
+
+        function addClass() {
+            const className = document.getElementById('className').value;
+            if (className) {
+                classes.push(className);
+                document.getElementById('assignClass').innerHTML += `<option value="${className}">${className}</option>`;
+                document.getElementById('className').value = '';
+            }
+        }
+
+        function addSubject() {
+            const subjectName = document.getElementById('subjectName').value;
+            const creditHours = document.getElementById('creditHours').value;
+            if (subjectName && creditHours) {
+                subjects.push({ name: subjectName, creditHr: parseInt(creditHours) });
+                document.getElementById('assignSubject').innerHTML += `<option value="${subjectName}">${subjectName}</option>`;
+                document.getElementById('subjectName').value = '';
+                document.getElementById('creditHours').value = '';
+            }
+        }
+
+        function addTeacher() {
+            const teacherName = document.getElementById('teacherName').value;
+            const className = document.getElementById('assignClass').value;
+            const subjectName = document.getElementById('assignSubject').value;
+            if (teacherName && className && subjectName) {
+                let subject = subjects.find(sub => sub.name === subjectName);
+                teachers.push({
+                    name: teacherName,
+                    assigned: [
+                        { class: className, subject: subject }
+                    ],
+                    constraints: [] // Add constraints if needed
+                });
+                document.getElementById('teacherName').value = '';
+            }
+        }
+
+        function generateTimetable() {
+            if (classes.length === 0 || subjects.length === 0 || teachers.length === 0) {
+                alert("Please add classes, subjects, and teachers.");
+                return;
+            }
+
+            const ga = new OptimizedTimetableGA(classes, subjects, teachers, 10, 50);
+            const bestSchedule = ga.run();
+            document.getElementById('teacher-timetable').innerHTML = generateTable(bestSchedule);
+        }
+
+        class OptimizedTimetableGA {
             constructor(classes, subjects, teachers, populationSize, maxGenerations) {
                 this.classes = classes;
                 this.subjects = subjects;
@@ -54,6 +142,7 @@
                 this.maxGenerations = maxGenerations;
                 this.population = [];
                 this.bestSchedule = null;
+                this.memoizedFitness = new Map();
             }
 
             initializePopulation() {
@@ -66,16 +155,15 @@
             generateRandomSchedule() {
                 let schedule = Array.from({ length: this.classes.length }, () =>
                     Array.from({ length: period.d }, () =>
-                        Array(period.p).fill(0)
+                        Array(period.p).fill(null)
                     )
                 );
 
-                // Randomly assign subjects to periods for each class
                 for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
                     let remainingLectures = this.getRemainingLecturesForClass(cIndex);
                     for (let day = 0; day < period.d; day++) {
                         for (let per = 0; per < period.p; per++) {
-                            if (schedule[cIndex][day][per] === 0 && remainingLectures > 0) {
+                            if (schedule[cIndex][day][per] === null && remainingLectures > 0) {
                                 let teacher = this.getRandomTeacher(cIndex, day, per);
                                 if (teacher) {
                                     if (this.isSchedulePossible(cIndex, day, per, teacher.name, schedule)) {
@@ -93,22 +181,16 @@
             getRandomTeacher(cIndex, day, per) {
                 const eligibleTeachers = this.teachers.filter(teacher =>
                     teacher.assigned.some(e => e.class === this.classes[cIndex])
-                ).filter(teacher =>
-                    !teacher.constraints.some(constraint =>
-                        constraint.day === day && constraint.start <= per && constraint.end >= per
-                    )
                 );
                 return eligibleTeachers.length > 0 ? eligibleTeachers[Math.floor(Math.random() * eligibleTeachers.length)] : null;
             }
 
             isSchedulePossible(classIndex, day, periodIndex, teacherName, schedule) {
-                // Ensure that no other class is taught by the same teacher in the same period
                 for (let otherClassIndex = 0; otherClassIndex < this.classes.length; otherClassIndex++) {
                     if (otherClassIndex !== classIndex && schedule[otherClassIndex][day][periodIndex] === teacherName) {
                         return false;
                     }
                 }
-                // Ensure that the class doesn't have multiple teachers in the same period
                 return !schedule[classIndex][day].includes(teacherName);
             }
 
@@ -122,13 +204,18 @@
             }
 
             calculateFitness(schedule) {
+                const key = JSON.stringify(schedule);
+                if (this.memoizedFitness.has(key)) {
+                    return this.memoizedFitness.get(key);
+                }
+
                 let fitness = 0;
                 for (let day = 0; day < period.d; day++) {
                     for (let per = 0; per < period.p; per++) {
                         let teacherSet = new Set();
                         for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
                             const teacher = schedule[cIndex][day][per];
-                            if (teacher !== 0) {
+                            if (teacher !== null) {
                                 if (teacherSet.has(teacher)) {
                                     fitness -= 10; // Conflict penalty
                                 } else {
@@ -142,6 +229,8 @@
                     let remainingLectures = this.getRemainingLecturesForClass(cIndex);
                     fitness += remainingLectures === 0 ? 50 : -20 * remainingLectures;
                 }
+
+                this.memoizedFitness.set(key, fitness);
                 return fitness;
             }
 
@@ -149,7 +238,7 @@
                 const sortedPopulation = this.population.sort(
                     (a, b) => this.calculateFitness(b) - this.calculateFitness(a)
                 );
-                return sortedPopulation.slice(0, this.populationSize / 2); // Top 50% parents
+                return sortedPopulation.slice(0, Math.ceil(this.populationSize / 2));
             }
 
             crossover(parent1, parent2) {
@@ -180,90 +269,32 @@
                         for (let j = i + 1; j < parents.length; j++) {
                             let offspring = this.crossover(parents[i], parents[j]);
                             if (Math.random() < 0.1) {
-                                offspring = this.mutate(offspring); // Apply mutation with 10% probability
+                                offspring = this.mutate(offspring);
                             }
                             newPopulation.push(offspring);
                         }
                     }
                     this.population = newPopulation;
                     this.bestSchedule = this.population.reduce((best, schedule) =>
-                        this.calculateFitness(schedule) > this.calculateFitness(best) ?
-                            schedule :
-                            best
+                        this.calculateFitness(schedule) > this.calculateFitness(best) ? schedule : best
                     );
-                    console.log(`Generation ${generation + 1}: Best Fitness = ${this.calculateFitness(this.bestSchedule)}`);
+
+                    // Early exit if a perfect schedule is found
+                    if (this.calculateFitness(this.bestSchedule) >= 100) {
+                        console.log(`Perfect schedule found in generation ${generation + 1}`);
+                        break;
+                    }
                 }
                 return this.bestSchedule;
             }
         }
-
-        const c = ["c1", "c2", "c3"];
-        const s = [
-            { name: "s1", creditHr: 3 },
-            { name: "s2", creditHr: 3 },
-            { name: "s3", creditHr: 3 },
-            { name: "s4", creditHr: 3 },
-            { name: "s5", creditHr: 3 },
-            { name: "s6", creditHr: 2 }
-        ];
-        const t = [
-            {
-                name: "t0", assigned: [
-                    { class: c[0], subject: s[0], lecture: [1, 1, 1] },
-                    { class: c[1], subject: s[0], lecture: [1, 1, 1] },
-                    { class: c[2], subject: s[0], lecture: [1, 1, 1] }
-                ], constraints: [
-                    { day: 1, start: 0, end: 3 }, // Available on Day 2 from 9:00 to 12:30
-                    { day: 2, start: 0, end: 3 }
-                ]
-            },
-            {
-                name: "t1", assigned: [
-                    { class: c[0], subject: s[1], lecture: [1, 1, 1] },
-                    { class: c[1], subject: s[1], lecture: [1, 1, 1] },
-                    { class: c[2], subject: s[1], lecture: [1, 1, 1] }
-                ], constraints: []
-            },
-            {
-                name: "t2", assigned: [
-                    { class: c[0], subject: s[2], lecture: [2, 1] },
-                    { class: c[1], subject: s[2], lecture: [2, 1] },
-                    { class: c[2], subject: s[2], lecture: [2, 1] }
-                ], constraints: []
-            },
-            {
-                name: "t3", assigned: [
-                    { class: c[0], subject: s[3], lecture: [1, 1, 1] },
-                    { class: c[1], subject: s[3], lecture: [1, 1, 1] },
-                    { class: c[2], subject: s[3], lecture: [1, 1, 1] }
-                ], constraints: []
-            },
-            {
-                name: "t4", assigned: [
-                    { class: c[0], subject: s[4], lecture: [1, 1, 1] },
-                    { class: c[1], subject: s[4], lecture: [1, 1, 1] },
-                    { class: c[2], subject: s[4], lecture: [1, 1, 1] }
-                ], constraints: []
-            },
-            {
-                name: "t5", assigned: [
-                    { class: c[0], subject: s[5], lecture: [1, 1, 1] },
-                    { class: c[1], subject: s[5], lecture: [1, 1, 1] },
-                    { class: c[2], subject: s[5], lecture: [1, 1, 1] }
-                ], constraints: []
-            }
-        ];
-
-        const period = { d: 5, p: 7 };
-        const ga = new TimetableGA(c, s, t, 10, 100);
-        const bestSchedule = ga.run();
 
         function generateTable(schedule) {
             let teachers = [];
             schedule.forEach(classSchedule => {
                 classSchedule.forEach(daySchedule => {
                     daySchedule.forEach(teacher => {
-                        if (teacher !== 0 && !teachers.includes(teacher)) {
+                        if (teacher !== null && !teachers.includes(teacher)) {
                             teachers.push(teacher);
                         }
                     });
@@ -300,8 +331,6 @@
             html += '</tbody></table>';
             return html;
         }
-
-        document.getElementById('teacher-timetable').innerHTML = generateTable(bestSchedule);
     </script>
 </body>
 
