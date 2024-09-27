@@ -3,7 +3,7 @@ import React from "react";
 function TimetableDisplay({ generatedTimetable }) {
     return (
         <div>
-            <h2>Generated Timetable</h2>
+            <h2>Student's POV</h2>
             <table border="1">
                 <thead>
                     <tr>
