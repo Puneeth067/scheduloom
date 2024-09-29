@@ -1,45 +1,58 @@
 import React from "react";
 
 function TeacherTimetableDisplay({ generatedTimetable, teachers }) {
-    // We will iterate over the teachers and show their schedules
     return (
-        <div>
-            <h2>Teacher's POV</h2>
-            <table border="1">
-                <thead>
+        <div className="p-6 shadow-md rounded-lg cursor-pointer">
+            <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6">
+                Teacher's POV
+            </h2>
+            <table className="min-w-full table-auto border border-gray-300">
+                <thead className="bg-gradient-to-r from-green-400 to-blue-600 text-white">
                     <tr>
-                        <th>Teacher</th>
-                        <th>Day</th>
-                        <th>Periods</th>
+                        <th className="p-3 text-left border border-gray-300">Teacher</th>
+                        <th className="p-3 text-left border border-gray-300">Day</th>
+                        <th className="p-3 text-left border border-gray-300">Periods</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-cyan-200">
                     {teachers.map((teacher, teacherIndex) => (
-                        <tr key={teacherIndex}>
-                            <td>{teacher.name}</td>
-                            <td colSpan="2">
-                                {generatedTimetable.map((classSchedule, dayIndex) => (
-                                    <div key={dayIndex}>
-                                        <h4>{`Day ${dayIndex + 1}`}</h4>
-                                        {classSchedule.map((daySchedule, classIndex) => (
-                                            <div key={classIndex}>
+                        <React.Fragment key={teacherIndex}>
+                            {generatedTimetable.map((_, dayIndex) => (
+                                <tr key={dayIndex}>
+                                    {/* Render the teacher name only on the first row for each teacher */}
+                                    {dayIndex === 0 && (
+                                        <td
+                                            rowSpan={generatedTimetable.length} // Spans the number of days
+                                            className="p-3 border border-gray-300 font-semibold text-gray-700 align-top"
+                                        >
+                                            {teacher.name}
+                                        </td>
+                                    )}
+                                    {/* Day column */}
+                                    <td className="p-3 border border-gray-300 font-bold text-blue-600">
+                                        {`Day ${dayIndex + 1}`}
+                                    </td>
+                                    {/* Periods column */}
+                                    <td className="p-3 border border-gray-300">
+                                        {generatedTimetable[dayIndex].map((daySchedule, classIndex) => (
+                                            <div key={classIndex} className="mt-1">
                                                 {daySchedule.map((period, periodIndex) => {
                                                     if (period === teacher.name) {
                                                         return (
-                                                            <p key={periodIndex}>
-                                                                {`Class ${classIndex + 1} - Period ${periodIndex + 1
-                                                                    }`}
-                                                            </p>
+                                                            <p
+                                                                key={periodIndex}
+                                                                className="text-gray-700"
+                                                            >{`Class ${classIndex + 1} - Period ${periodIndex + 1}`}</p>
                                                         );
                                                     }
                                                     return null;
                                                 })}
                                             </div>
                                         ))}
-                                    </div>
-                                ))}
-                            </td>
-                        </tr>
+                                    </td>
+                                </tr>
+                            ))}
+                        </React.Fragment>
                     ))}
                 </tbody>
             </table>
