@@ -18,94 +18,59 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-cyan-950 cursor-pointer">
-      <div className="flex flex-col items-start my-8 p-4 w-full shadow-md	">
-        {/* Scheduloom Title */}
-        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 dark:text-white pr-4">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
-            Scheduloom
-          </span>
-        </h1>
-
-        {/* Subtitle Text */}
-        <div className="subtitle-container w-full">
-          <p className="text-md md:text-md font-medium text-blue-800 dark:text-blue-300 opacity-5">
-            {`Create scalable, optimized schedules for both teachers and students with ease.`.split(' ').map((word, index) => (
-              <span key={index}>
-                {word}
-                {index < `Create scalable, optimized schedules for both teachers and students with ease.`.split(' ').length - 1 && <span className="mr-2"></span>}
-              </span>
-            ))}
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <h1 className="text-4xl font-bold text-center text-indigo-600 mb-12">
+        Timetable Management System
+      </h1>
 
       {/* Input forms for adding data */}
-      <ClassInput setClasses={setClasses} classes={classes} />
-      <SubjectInput setSubjects={setSubjects} subjects={subjects} />
-      <TeacherInput
-        teachers={teachers}
-        setTeachers={setTeachers}
-        classes={classes}
-        subjects={subjects}
-      />
+      <div className="flex flex-wrap justify-center mb-12 space-x-6 space-y-6">
+        <ClassInput setClasses={setClasses} classes={classes} />
+        <SubjectInput setSubjects={setSubjects} subjects={subjects} />
+        <TeacherInput
+          teachers={teachers}
+          setTeachers={setTeachers}
+          classes={classes}
+          subjects={subjects}
+        />
+      </div>
 
       {/* Generate Timetable Button */}
-      <TimetableGenerator
-        classes={classes}
-        subjects={subjects}
-        teachers={teachers}
-        setGeneratedTimetable={setGeneratedTimetable}
-      />
-      
+      <div className="flex justify-center mb-8">
+        <TimetableGenerator
+          classes={classes}
+          subjects={subjects}
+          teachers={teachers}
+          setGeneratedTimetable={setGeneratedTimetable}
+        />
+      </div>
+
       {/* Tab navigation */}
       {generatedTimetable && (
-        <div className="mb-4 border-b border-gray-200 dark:border-gray-700 pl-4 pt-4">
-          <ul
-            className="flex flex-wrap -mb-px text-sm font-medium text-center"
-            role="tablist"
-          >
-            {/* Student POV Tab */}
-            <li className="me-2" role="presentation">
-              <button
-                onClick={() => handleTabChange("student")}
-                className={`relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 ${
-                  activeTab === "student"
-                    ? "border-b-2 border-purple-600"
-                    : ""
+        <div className="mt-12">
+          <div className="flex justify-center space-x-4 mb-6">
+            <button
+              onClick={() => handleTabChange("student")}
+              className={`px-4 py-2 rounded-lg transition-colors duration-300 ${activeTab === "student"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
                 }`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "student"}
-              >
-                <span className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0 cursor-pointer">
-                  Student POV
-                </span>
-              </button>
-            </li>
-
-            {/* Teacher POV Tab */}
-            <li className="me-2" role="presentation">
-              <button
-                onClick={() => handleTabChange("teacher")}
-                className={`relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800 ${
-                  activeTab === "teacher"
-                    ? "border-b-2 border-purple-600"
-                    : ""
+            >
+              Student POV
+            </button>
+            <button
+              onClick={() => handleTabChange("teacher")}
+              className={`px-4 py-2 rounded-lg transition-colors duration-300 ${activeTab === "teacher"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-200 hover:bg-gray-300"
                 }`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "teacher"}
-              >
-                <span className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0 cursor-pointer">
-                  Teacher POV
-                </span>
-              </button>
-            </li>
-          </ul>
+            >
+              Teacher POV
+            </button>
+          </div>
 
           {/* Conditional rendering based on the selected tab */}
-          <div className="mt-4">
+          <div className="mt-8">
             {activeTab === "student" && (
               <TimetableDisplay generatedTimetable={generatedTimetable} />
             )}
@@ -118,13 +83,8 @@ function App() {
           </div>
         </div>
       )}
-
-
-
-
     </div>
   );
-  }
-  
+}
 
 export default App;
