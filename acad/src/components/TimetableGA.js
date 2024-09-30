@@ -16,69 +16,76 @@ class TimetableGA {
         }
     }
 
-    generateRandomSchedule() {
-        const period = {
-            d: 6,
-            p: 8
-        }; // 6 days, 8 periods per day
-        let schedule = Array.from({
-                length: this.classes.length
-            }, () =>
-            Array.from({
-                length: period.d
-            }, () => Array(period.p).fill(null))
-        );
+  generateRandomSchedule() {
+      const period = {
+          d: 6,
+          p: 8
+      }; // 6 days, 8 periods per day
+      let schedule = Array.from({
+              length: this.classes.length
+          }, () =>
+          Array.from({
+              length: period.d
+          }, () => Array(period.p).fill(null))
+      );
 
-        // Assign teachers to all periods for each class
-        for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
-            let remainingLectures = this.getRemainingLecturesForClass(cIndex);
+      // Assign subjects and teachers for every period, ensuring no free periods
+      for (let cIndex = 0; cIndex < this.classes.length; cIndex++) {
+          let subjectIndex = 0;
 
-            // Assign subjects and teachers for each class's timetable
-            for (let day = 0; day < period.d; day++) {
-                for (let per = 0; per < period.p; per++) {
-                    if (remainingLectures > 0 && schedule[cIndex][day][per] === null) {
-                        let teacher = this.getRandomTeacher(cIndex, day, per, schedule);
-                        if (teacher && this.isSchedulePossible(cIndex, day, per, teacher.name, schedule)) {
-                            schedule[cIndex][day][per] = teacher.name;
-                            remainingLectures--;
-                        }
-                    }
-                }
-            }
+          for (let day = 0; day < period.d; day++) {
+              for (let per = 0; per < period.p; per++) {
+                  let subject = this.subjects[subjectIndex % this.subjects.length]; // Cycle through subjects
+                  let teacher = this.getRandomTeacher(cIndex, day, per, schedule, subject);
 
-            // Ensure no empty periods for the class by assigning remaining teachers
-            for (let day = 0; day < period.d; day++) {
-                for (let per = 0; per < period.p; per++) {
-                    if (schedule[cIndex][day][per] === null) {
-                        let teacher = this.getRandomTeacher(cIndex, day, per, schedule);
-                        if (teacher) {
-                            schedule[cIndex][day][per] = teacher.name;
-                        }
-                    }
-                }
-            }
-        }
+                  if (teacher && this.isSchedulePossible(cIndex, day, per, teacher.name, schedule)) {
+                      schedule[cIndex][day][per] = `${teacher.name} (${subject.name})`; // Assign teacher and subject
+                  } else {
+                      let fallbackTeacher = this.getFallbackTeacher(cIndex, day, per, schedule, subject);
+                      if (fallbackTeacher) {
+                          schedule[cIndex][day][per] = `${fallbackTeacher.name} (${subject.name})`; // Assign fallback teacher
+                      } else {
+                          schedule[cIndex][day][per] = "No Teacher Available";
+                      }
+                  }
 
-        return schedule;
-    }
+                  subjectIndex++; // Move to the next subject
+              }
+          }
+      }
 
-    getRandomTeacher(cIndex, day, per, schedule) {
-        // Find eligible teachers who are not already assigned in the same period
+      return schedule;
+  }
+
+
+
+    getRandomTeacher(cIndex, day, per, schedule, subject) {
         const eligibleTeachers = this.teachers.filter(teacher => {
             const teacherPeriodCount = this.getTeacherPeriodsPerDay(teacher.name, day, schedule);
 
+            // Ensure teacher is eligible for the class and subject, and is within their daily limit
             return (
-                teacher.assigned.some(e => e.class === this.classes[cIndex]) &&
+                teacher.assigned.some(e => e.class === this.classes[cIndex] && e.subject.name === subject.name) &&
                 teacherPeriodCount < teacher.maxHoursPerDay &&
-                this.isTeacherAvailable(teacher.name, day, per, schedule)
+                this.isTeacherAvailable(teacher.name, day, per, schedule) // Check if teacher is available
             );
         });
 
         return eligibleTeachers.length > 0 ? eligibleTeachers[Math.floor(Math.random() * eligibleTeachers.length)] : null;
     }
 
+
+    getFallbackTeacher(cIndex, day, per, schedule, subject) {
+        const availableTeachers = this.teachers.filter(teacher => {
+            return this.isTeacherAvailable(teacher.name, day, per, schedule);
+        });
+
+        return availableTeachers.length > 0 ? availableTeachers[Math.floor(Math.random() * availableTeachers.length)] : null;
+    }
+
+
     isTeacherAvailable(teacherName, day, period, schedule) {
-        // Ensure teacher is not already assigned to another class in the same period
+        // Check if the teacher is already teaching another class during the same period
         for (let classSchedule of schedule) {
             if (classSchedule[day][period] === teacherName) {
                 return false;
@@ -97,40 +104,6 @@ class TimetableGA {
             }
         }
         return count;
-    }
-
-    getRemainingLecturesForClass(cIndex) {
-        let totalLectures = 0;
-        this.teachers.forEach(teacher => {
-            let valid = teacher.assigned.find(e => e.class === this.classes[cIndex]);
-            if (valid) totalLectures += valid.subject.creditHr;
-        });
-        return totalLectures;
-    }
-
-    // Fitness function to evaluate the quality of the schedule
-    calculateFitness(schedule) {
-        let fitness = 0;
-
-        // Check for teacher conflicts and penalize them
-        for (let day = 0; day < schedule[0].length; day++) {
-            for (let period = 0; period < schedule[0][day].length; period++) {
-                const teachersInPeriod = new Set();
-
-                for (let classIndex = 0; classIndex < schedule.length; classIndex++) {
-                    const teacher = schedule[classIndex][day][period];
-                    if (teacher !== null) {
-                        if (teachersInPeriod.has(teacher)) {
-                            fitness -= 10; // Penalty for conflict
-                        } else {
-                            teachersInPeriod.add(teacher);
-                        }
-                    }
-                }
-            }
-        }
-
-        return fitness;
     }
 
     run() {
@@ -152,6 +125,30 @@ class TimetableGA {
 
         this.bestSchedule = bestSchedule;
         return this.bestSchedule;
+    }
+
+    calculateFitness(schedule) {
+        let fitness = 0;
+
+        // Check for teacher conflicts and penalize them
+        for (let day = 0; day < schedule[0].length; day++) {
+            for (let period = 0; period < schedule[0][day].length; period++) {
+                const teachersInPeriod = new Set();
+
+                for (let classIndex = 0; classIndex < schedule.length; classIndex++) {
+                    const teacher = schedule[classIndex][day][period];
+                    if (teacher !== null) {
+                        if (teachersInPeriod.has(teacher)) {
+                            fitness -= 10; // Penalize conflicts
+                        } else {
+                            teachersInPeriod.add(teacher);
+                        }
+                    }
+                }
+            }
+        }
+
+        return fitness;
     }
 }
 

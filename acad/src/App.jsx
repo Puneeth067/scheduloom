@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import ClassInput from "./components/ClassInput";
 import SubjectInput from "./components/SubjectInput";
 import TeacherInput from "./components/TeacherInput";
+import ExcelUpload from "./components/ExcelUpload";
 import TimetableGenerator from "./components/TimetableGenerator";
 import TimetableDisplay from "./components/TimetableDisplay";
 import TeacherTimetableDisplay from "./components/TeacherTimetableDisplay";
@@ -12,6 +13,46 @@ function App() {
   const [teachers, setTeachers] = useState([]);
   const [generatedTimetable, setGeneratedTimetable] = useState(null);
   const [activeTab, setActiveTab] = useState("student");
+
+  const handleExcelData = (data) => {
+    // Example parsing: assuming that the first row contains the headers,
+    // and subsequent rows contain class, subject, and teacher data.
+    const parsedClasses = [];
+    const parsedSubjects = [];
+    const parsedTeachers = [];
+
+    data.forEach((row, index) => {
+      if (index === 0) return; // Skip the header row
+
+      const className = row[0];
+      const subjectName = row[1];
+      const teacherName = row[2];
+      const creditHours = row[3]; // assuming credit hours are in the 4th column
+
+      // Add to classes if not already added
+      if (!parsedClasses.includes(className)) {
+        parsedClasses.push(className);
+      }
+
+      // Add to subjects if not already added
+      if (!parsedSubjects.some((subject) => subject.name === subjectName)) {
+        parsedSubjects.push({ name: subjectName, creditHr: creditHours });
+      }
+
+      // Add to teachers
+      if (!parsedTeachers.some((teacher) => teacher.name === teacherName)) {
+        parsedTeachers.push({
+          name: teacherName,
+          assigned: [{ class: className, subject: { name: subjectName, creditHr: creditHours } }],
+          constraints: [], // Initially no constraints
+        });
+      }
+    });
+
+    setClasses(parsedClasses);
+    setSubjects(parsedSubjects);
+    setTeachers(parsedTeachers);
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -33,6 +74,11 @@ function App() {
           classes={classes}
           subjects={subjects}
         />
+      </div>
+
+      {/* Excel Upload */}
+      <div className="flex justify-center mb-12">
+        <ExcelUpload onFileUpload={handleExcelData} />
       </div>
 
       {/* Generate Timetable Button */}

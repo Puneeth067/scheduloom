@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 function TimetableDisplay({ generatedTimetable }) {
     return (
@@ -21,7 +21,6 @@ function TimetableDisplay({ generatedTimetable }) {
                         <React.Fragment key={classIndex}>
                             {classSchedule.map((daySchedule, dayIndex) => (
                                 <tr key={`${classIndex}-${dayIndex}`} className="hover:bg-gray-100 transition duration-200 ease-in-out">
-                                    {/* Render class name only once by checking if it's the first row for the class */}
                                     {dayIndex === 0 && (
                                         <td
                                             rowSpan={classSchedule.length}
@@ -33,7 +32,6 @@ function TimetableDisplay({ generatedTimetable }) {
                                     <td className="p-3 border border-gray-300 font-bold text-blue-600">
                                         {`Day ${dayIndex + 1}`}
                                     </td>
-                                    {/* Render each period in its own column */}
                                     {daySchedule.map((period, periodIndex) => (
                                         <td key={periodIndex} className="p-3 border border-gray-300 text-center">
                                             {period ? (
@@ -41,7 +39,7 @@ function TimetableDisplay({ generatedTimetable }) {
                                                     {period}
                                                 </span>
                                             ) : (
-                                                <span className="text-gray-400 italic">Free</span>
+                                                <span className="text-red-500 italic">No Teacher Available</span>
                                             )}
                                         </td>
                                     ))}
