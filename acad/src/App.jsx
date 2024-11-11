@@ -1,4 +1,8 @@
 import React, { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { supabase } from './utils/supabaseClient';
+
 import ClassInput from "./components/ClassInput";
 import SubjectInput from "./components/SubjectInput";
 import TeacherInput from "./components/TeacherInput";
@@ -13,6 +17,7 @@ function App() {
   const [teachers, setTeachers] = useState([]);
   const [generatedTimetable, setGeneratedTimetable] = useState(null);
   const [activeTab, setActiveTab] = useState("student");
+  const [classIndex, setClassIndex] = useState(0);
 
   const handleExcelData = (data) => {
     // Example parsing: assuming that the first row contains the headers,
@@ -58,65 +63,85 @@ function App() {
     setActiveTab(tab);
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setGeneratedTimetable(null);
+      setActiveTab("student");
+      window.location.href = "/"; // Redirect to the Auth component
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <h1 className="text-4xl font-bold text-center text-indigo-600 mb-12">
-        Timetable Management System
-      </h1>
-
-      {/* Input forms for adding data */}
-      <div className="flex flex-wrap justify-center mb-12 space-x-6 space-y-6">
-        <ClassInput setClasses={setClasses} classes={classes} />
-        <SubjectInput setSubjects={setSubjects} subjects={subjects} />
-        <TeacherInput
-          teachers={teachers}
-          setTeachers={setTeachers}
-          classes={classes}
-          subjects={subjects}
-        />
+      <div className="flex justify-between items-center mb-8">
+        <Button variant="destructive" onClick={handleLogout}>
+          Logout
+        </Button>
+        <h1 className="text-4xl font-bold text-indigo-600">
+          Timetable Management System
+        </h1>
+        <div />
       </div>
 
-      {/* Excel Upload */}
-      <div className="flex justify-center mb-12">
-        <ExcelUpload onFileUpload={handleExcelData} />
-      </div>
-
-      {/* Generate Timetable Button */}
-      <div className="flex justify-center mb-8">
-        <TimetableGenerator
-          classes={classes}
-          subjects={subjects}
-          teachers={teachers}
-          setGeneratedTimetable={setGeneratedTimetable}
-        />
-      </div>
-
-      {/* Tab navigation */}
-      {generatedTimetable && (
-        <div className="mt-12">
-          <div className="flex justify-center space-x-4 mb-6">
-            <button
-              onClick={() => handleTabChange("student")}
-              className={`px-4 py-2 rounded-lg transition-colors duration-300 ${activeTab === "student"
-                  ? "bg-indigo-500 text-white"
-                  : "bg-gray-200 hover:bg-gray-300"
-                }`}
-            >
-              Student POV
-            </button>
-            <button
-              onClick={() => handleTabChange("teacher")}
-              className={`px-4 py-2 rounded-lg transition-colors duration-300 ${activeTab === "teacher"
-                  ? "bg-indigo-500 text-white"
-                  : "bg-gray-200 hover:bg-gray-300"
-                }`}
-            >
-              Teacher POV
-            </button>
+      <Card className="mb-12">
+        <CardContent >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ClassInput setClasses={setClasses} classes={classes} />
+            <SubjectInput setSubjects={setSubjects} subjects={subjects} />
+            <TeacherInput
+              teachers={teachers}
+              setTeachers={setTeachers}
+              classes={classes}
+              subjects={subjects}
+            />
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Conditional rendering based on the selected tab */}
-          <div className="mt-8">
+      <Card className="mb-8">
+        <CardContent className="pt-6">
+          <div className="flex justify-center">
+            <ExcelUpload onFileUpload={handleExcelData} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-8">
+        <CardContent className="pt-6">
+          <div className="flex justify-center">
+            <TimetableGenerator
+              classes={classes}
+              subjects={subjects}
+              teachers={teachers}
+              setGeneratedTimetable={setGeneratedTimetable}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {generatedTimetable && (
+        <Card className="mt-12">
+          <CardHeader>
+            <CardTitle>Timetable</CardTitle>
+            <div className="flex space-x-4">
+              <Button
+                onClick={() => handleTabChange("student")}
+                variant={activeTab === "student" ? "default" : "ghost"}
+              >
+                Student POV
+              </Button>
+              <Button
+                onClick={() => handleTabChange("teacher")}
+                variant={activeTab === "teacher" ? "default" : "ghost"}
+              >
+                Teacher POV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
             {activeTab === "student" && (
               <TimetableDisplay generatedTimetable={generatedTimetable} />
             )}
@@ -124,10 +149,11 @@ function App() {
               <TeacherTimetableDisplay
                 generatedTimetable={generatedTimetable}
                 teachers={teachers}
+                classIndex={classIndex}
               />
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
