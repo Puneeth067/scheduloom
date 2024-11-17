@@ -36,7 +36,7 @@ function TeacherTimetableDisplay({ generatedTimetable, teachers }) {
                                         <td key={periodIndex} className="p-3 border border-gray-300 text-center">
                                             {classSchedule[periodIndex] === teacher.name ? (
                                                 <span className="text-gray-700 font-medium">
-                                                    {`Teaching Class ${classIndex + 1}`}
+                                                    {`Teaching Class ${periodIndex + 1}`}
                                                 </span>
                                             ) : (
                                                 <span className="text-gray-400 italic">Free</span>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import {supabase} from "../utils/supabaseClient";
 
 function TeacherInput({ teachers, setTeachers, classes, subjects }) {
     const [teacherName, setTeacherName] = useState("");
@@ -8,25 +9,50 @@ function TeacherInput({ teachers, setTeachers, classes, subjects }) {
     const [unavailableDay, setUnavailableDay] = useState("");
     const [startPeriod, setStartPeriod] = useState("");
     const [endPeriod, setEndPeriod] = useState("");
-    const [maxHoursPerDay, setMaxHoursPerDay] = useState(0);
+    const [maxHoursPerDay, setMaxHoursPerDay] = useState(8); // Set default to 8
+    const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const addTeacher = () => {
+    const addTeacherToSupabase = async (teacherData) => {
+        setLoading(true);
+        setErrorMessage("");
+
+        const { data, error } = await supabase
+            .from('teachers') // Use the existing teachers table
+            .insert([teacherData]);
+
+        setLoading(false);
+
+        if (error) {
+            console.error("Error adding teacher:", error.message);
+            setErrorMessage("Failed to add teacher. Try again.");
+        } else {
+            console.log("Teacher added:", data);
+        }
+    };
+
+    const addTeacher = async () => {
         if (teacherName && selectedClass && selectedSubject) {
             const subject = subjects.find((sub) => sub.name === selectedSubject);
-            setTeachers([
-                ...teachers,
-                {
-                    name: teacherName,
-                    assigned: [{ class: selectedClass, subject }],
-                    constraints: constraints,
-                    maxHoursPerDay: parseInt(maxHoursPerDay),
-                },
-            ]);
+            const newTeacher = {
+                name: teacherName,
+                assigned: [{ class: selectedClass, subject }],
+                constraints: constraints,
+                maxHoursPerDay: parseInt(maxHoursPerDay),
+            };
+
+            // Update the local state
+            setTeachers([...teachers, newTeacher]);
+
+            // Save the teacher in Supabase
+            await addTeacherToSupabase(newTeacher);
+
+            // Reset the input fields
             setTeacherName("");
             setSelectedClass("");
             setSelectedSubject("");
             setConstraints([]);
-            setMaxHoursPerDay(0);
+            setMaxHoursPerDay(8); // Reset to default 8
         }
     };
 
@@ -57,9 +83,7 @@ function TeacherInput({ teachers, setTeachers, classes, subjects }) {
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
             >
-                <option value="" disabled>
-                    Select Class
-                </option>
+                <option value="" disabled>Select Class</option>
                 {classes.map((cls, index) => (
                     <option key={index} value={cls}>
                         {cls}
@@ -71,9 +95,7 @@ function TeacherInput({ teachers, setTeachers, classes, subjects }) {
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
             >
-                <option value="" disabled>
-                    Select Subject
-                </option>
+                <option value="" disabled>Select Subject</option>
                 {subjects.map((sub, index) => (
                     <option key={index} value={sub.name}>
                         {sub.name}
@@ -88,9 +110,7 @@ function TeacherInput({ teachers, setTeachers, classes, subjects }) {
                     onChange={(e) => setUnavailableDay(e.target.value)}
                     className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4"
                 >
-                    <option value="" disabled>
-                        Select Day
-                    </option>
+                    <option value="" disabled>Select Day</option>
                     <option value="0">Monday</option>
                     <option value="1">Tuesday</option>
                     <option value="2">Wednesday</option>
@@ -142,9 +162,11 @@ function TeacherInput({ teachers, setTeachers, classes, subjects }) {
             <button
                 onClick={addTeacher}
                 className="bg-indigo-500 text-white px-4 py-2 rounded-lg w-full mt-6 hover:bg-indigo-600 transition-colors"
+                disabled={loading} // Disable button when loading
             >
-                Add Teacher
+                {loading ? "Adding..." : "Add Teacher"}
             </button>
+            {errorMessage && <div className="text-red-500 mt-2">{errorMessage}</div>}
         </div>
     );
 }
