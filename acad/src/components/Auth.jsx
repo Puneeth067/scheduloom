@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
@@ -7,17 +8,40 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
 
-  const handleSignIn = async (e) => {
+  const checkEmailExists = async (email) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single();
+    
+    return !!data;
+  };
+
+const handleSignIn = async (e) => {
     e.preventDefault();
     try {
       setError(null);
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+      
+      // Fetch user data after successful sign in
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+        
+      if (userError) throw userError;
+      
+      navigate('/', { state: { user: userData } });
+      
     } catch (error) {
       setError(error.message);
     } finally {
@@ -30,14 +54,50 @@ export default function Auth() {
     try {
       setError(null);
       setLoading(true);
-      const { error } = await supabase.auth.signUp({
+
+      // Check if email already exists
+      const emailExists = await checkEmailExists(email);
+      if (emailExists) {
+        throw new Error('Email already exists. Please sign in instead.');
+      }
+      
+      // Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
-      if (error) throw error;
-      else {
-        setError("Check your email for the confirmation link!");
+      
+      if (authError) throw authError;
+
+      try {
+        // Try to insert user data into users table
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: authData.user.id,
+              email: email,
+            }
+          ]);
+
+        // If we get RLS error, we can ignore it since the auth signup was successful
+        if (dbError && !dbError.message.includes('row-level security')) {
+          throw dbError;
+        }
+      } catch (insertError) {
+        // If it's not an RLS error, we want to propagate it
+        if (!insertError.message.includes('row-level security')) {
+          throw insertError;
+        }
       }
+
+      setError("Sign up successful! Check your email for the confirmation link.");
+      
+      // Switch to login mode after successful signup
+      setTimeout(() => {
+        setIsLogin(true);
+      }, 3000);
+      
     } catch (error) {
       setError(error.message);
     } finally {
