@@ -1,6 +1,6 @@
 import React from "react";
 
-function TeacherTimetableDisplay({ generatedTimetable, teachers }) {
+function TeacherTimetableDisplay({ generatedTimetable, teachers, classIndex }) {
     return (
         <div className="p-6 bg-white shadow-lg rounded-lg max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Teacher's Timetable</h2>
@@ -34,14 +34,14 @@ function TeacherTimetableDisplay({ generatedTimetable, teachers }) {
                                     </td>
                                     {daySchedule.map((classSchedule, periodIndex) => (
                                         <td key={periodIndex} className="p-3 border border-gray-300 text-center">
-                                            {classSchedule[periodIndex] === teacher.name ? (
-                                                <span className="text-gray-700 font-medium">
-                                                    {`Teaching Class ${periodIndex + 1}`}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 italic">Free</span>
-                                            )}
-                                        </td>
+                                        {classSchedule[periodIndex] === teacher.name ? (
+                                          <span className="text-gray-700 font-medium">
+                                            {`Teaching Class ${classIndex + 1}`}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 italic">Free</span>
+                                        )}
+                                      </td>
                                     ))}
                                 </tr>
                             ))}
