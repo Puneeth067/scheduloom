@@ -155,7 +155,7 @@ export default function DataEntry({
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Subjects</h2>
-          <button
+          <button title='hello'
             onClick={addSubject}
             className="text-blue-600 hover:text-blue-800"
           >
@@ -167,7 +167,7 @@ export default function DataEntry({
             <li key={subject.id} className="bg-gray-50 p-3 rounded">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium">{subject.name}</span>
-                <button
+                <button title='hello'
                   onClick={() =>
                     setSubjects(subjects.filter((s) => s.id !== subject.id))
                   }
@@ -204,7 +204,7 @@ export default function DataEntry({
       <div className="bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Classes</h2>
-          <button
+          <button title='hello'
             onClick={addClass}
             className="text-blue-600 hover:text-blue-800"
           >
@@ -219,6 +219,7 @@ export default function DataEntry({
             >
               <span>{cls.name}</span>
               <button
+                title='hello'
                 onClick={() =>
                   setClasses(classes.filter((c) => c.id !== cls.id))
                 }
