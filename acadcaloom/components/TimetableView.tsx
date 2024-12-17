@@ -1,8 +1,7 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Timetable, Subject, Teacher, Class, DAYS, PERIODS_PER_DAY, Interval } from '../types';
-import { Trash2, Pencil } from 'lucide-react';
-import { LabIcon } from './LabIcon';
+import { Timetable, Subject, Teacher, Class, DAYS, PERIODS_PER_DAY } from '../types';
+import { Trash2, Pencil, FlaskRoundIcon as Flask } from 'lucide-react'; // Added Flask icon
 
 interface TimetableViewProps {
   timetables: Timetable[];
@@ -10,12 +9,12 @@ interface TimetableViewProps {
   teachers: Teacher[];
   classes: Class[];
   view: 'student' | 'teacher';
-  intervals: Interval[];
-  onRemoveSlot: (classId: string, day: string, period: number) => void;
-  onEditSlot: (classId: string, day: string, period: number) => void;
+  onRemoveTimetable: (classId: string) => void;
+  onRemoveSlot: (classId: string, day: string, period: number) => void; // Updated
+  onEditSlot: (classId: string, day: string, period: number) => void; // Updated
 }
 
-export default function TimetableView({ timetables, subjects, teachers, classes, view, intervals, onRemoveSlot, onEditSlot }: TimetableViewProps) {
+export default function TimetableView({ timetables, subjects, teachers, classes, view, onRemoveTimetable, onRemoveSlot, onEditSlot }: TimetableViewProps) { // Updated
   const getSubjectName = (subjectId: string | null) => {
     if (!subjectId) return '';
     const subject = subjects.find((s) => s.id === subjectId);
@@ -28,7 +27,7 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
   };
 
   const getTeacherSchedule = (teacherId: string) => {
-    const schedule: { [key: string]: { className: string; subjectName: string; isLab: boolean }[] } = {};
+    const schedule: { [key: string]: { className: string; subjectName: string }[] } = {};
     DAYS.forEach(day => {
       schedule[day] = Array(PERIODS_PER_DAY).fill(null);
     });
@@ -40,7 +39,6 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
           schedule[slot.day][slot.period] = {
             className: getClassName(timetable.classId),
             subjectName: subject.name,
-            isLab: slot.isLab,
           };
         }
       });
@@ -49,8 +47,42 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
     return schedule;
   };
 
-  const isInterval = (day: string, period: number) => {
-    return intervals.some(interval => interval.day === day && interval.period === period);
+  const renderCell = (slot: any, timetable: Timetable, day: string, period: number) => {
+    const subject = subjects.find(s => s.id === slot?.subjectId);
+    const isInterval = (period === 2 || period === 4);
+
+    if (isInterval) {
+      return <TableCell key={period} className="bg-gray-200">Interval</TableCell>;
+    }
+
+    return (
+      <TableCell
+        key={period}
+        style={{ backgroundColor: subject?.color }}
+        className="relative group"
+      >
+        {slot ? (
+          <>
+            {getSubjectName(slot.subjectId)}
+            {slot.isLab && <Flask size={16} className="inline-block ml-1" />}
+            <div className="absolute top-0 right-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 text-blue-500 hover:text-blue-700"
+                onClick={() => onEditSlot(timetable.classId, day, period)}
+              >
+                <Pencil size={12} />
+              </button>
+              <button
+                className="p-1 text-gray-500 hover:text-red-500"
+                onClick={() => onRemoveSlot(timetable.classId, day, period)}
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          </>
+        ) : ''}
+      </TableCell>
+    );
   };
 
   if (view === 'teacher') {
@@ -76,13 +108,8 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
                       const schedule = getTeacherSchedule(teacher.id);
                       const slot = schedule[day][period];
                       return (
-                        <TableCell key={period} className={isInterval(day, period) ? 'bg-gray-200' : ''}>
-                          {slot ? (
-                            <>
-                              {`${slot.className} - ${slot.subjectName}`}
-                              {slot.isLab && <LabIcon />}
-                            </>
-                          ) : ''}
+                        <TableCell key={period}>
+                          {slot ? `${slot.className} - ${slot.subjectName}` : ''}
                         </TableCell>
                       );
                     })}
@@ -105,7 +132,7 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
             <TableHeader>
               <TableRow>
                 <TableHead>Day / Period</TableHead>
-                {Array.from({ length: PERIODS_PER_DAY }, (_, i) => (
+                {Array.from({ length: PERIODS_PER_DAY + 2 }, (_, i) => (
                   <TableHead key={i}>{i + 1}</TableHead>
                 ))}
               </TableRow>
@@ -114,37 +141,10 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
               {DAYS.map((day) => (
                 <TableRow key={day}>
                   <TableCell>{day}</TableCell>
-                  {Array.from({ length: PERIODS_PER_DAY }, (_, period) => {
-                    const slot = timetable.slots.find((s) => s.day === day && s.period === period);
-                    const isIntervalSlot = isInterval(day, period);
-                    return (
-                      <TableCell
-                        key={period}
-                        style={{ backgroundColor: slot?.subjectId && !isIntervalSlot ? subjects.find(s => s.id === slot.subjectId)?.color : '' }}
-                        className={`relative group ${isIntervalSlot ? 'bg-gray-200' : ''}`}
-                      >
-                        {slot && !isIntervalSlot ? (
-                          <>
-                            {getSubjectName(slot.subjectId)}
-                            {slot.isLab && <LabIcon />}
-                            <div className="absolute top-0 right-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                className="p-1 text-blue-500 hover:text-blue-700"
-                                onClick={() => onEditSlot(timetable.classId, day, period)}
-                              >
-                                <Pencil size={12} />
-                              </button>
-                              <button
-                                className="p-1 text-gray-500 hover:text-red-500"
-                                onClick={() => onRemoveSlot(timetable.classId, day, period)}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </>
-                        ) : isIntervalSlot ? 'Interval' : ''}
-                      </TableCell>
-                    );
+                  {Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+                    const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+                    const slot = timetable.slots.find((s) => s.day === day && s.period === adjustedPeriod);
+                    return renderCell(slot, timetable, day, period);
                   })}
                 </TableRow>
               ))}
@@ -155,3 +155,4 @@ export default function TimetableView({ timetables, subjects, teachers, classes,
     </div>
   );
 }
+

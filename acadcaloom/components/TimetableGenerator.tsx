@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Subject, Teacher, Class, Timetable, DAYS, PERIODS_PER_DAY, Interval } from '../types';
+import { Subject, Teacher, Class, Timetable, DAYS, PERIODS_PER_DAY } from '../types';
 import { generateRandomColor } from '../utils/colorGenerator';
 import { generateTimetables } from '../utils/geneticAlgorithm';
 import { parseExcelFile } from '../utils/excelParser';
@@ -25,7 +25,6 @@ export default function TimetableGenerator() {
   const [bulkUploadData, setBulkUploadData] = useState('');
   const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null);
   const [editingSlot, setEditingSlot] = useState<{ classId: string; day: string; period: number } | null>(null);
-  const [intervals, setIntervals] = useState<Interval[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addSubject = (subject: Omit<Subject, 'id' | 'color'>) => {
@@ -55,7 +54,21 @@ export default function TimetableGenerator() {
 
   const generateTimetablesHandler = () => {
     const generatedTimetables = generateTimetables(classes, teachers, subjects);
-    setTimetables(generatedTimetables);
+    // Adjust the generated timetables to include interval slots
+    const adjustedTimetables = generatedTimetables.map(timetable => ({
+      ...timetable,
+      slots: DAYS.flatMap(day =>
+        Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+          if (period === 2 || period === 4) {
+            return { day, period, subjectId: null, isLab: false, isInterval: true };
+          }
+          const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+          const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
+          return slot ? { ...slot, period } : { day, period, subjectId: null, isLab: false, isInterval: false };
+        })
+      ),
+    }));
+    setTimetables(adjustedTimetables);
   };
 
   const handleBulkUpload = () => {
@@ -65,7 +78,6 @@ export default function TimetableGenerator() {
       if (data.teachers) setTeachers(data.teachers);
       if (data.classes) setClasses(data.classes);
       if (data.timetables) setTimetables(data.timetables);
-      if (data.intervals) setIntervals(data.intervals);
       setBulkUploadData('');
     } catch (error) {
       console.error('Error parsing bulk upload data:', error);
@@ -77,12 +89,11 @@ export default function TimetableGenerator() {
     const file = event.target.files?.[0];
     if (file) {
       try {
-        const { subjects, teachers, classes, timetables, intervals } = await parseExcelFile(file);
+        const { subjects, teachers, classes, timetables } = await parseExcelFile(file);
         setSubjects(subjects);
         setTeachers(teachers);
         setClasses(classes);
         setTimetables(timetables);
-        setIntervals(intervals);
       } catch (error) {
         console.error('Error parsing Excel file:', error);
         alert('Error parsing Excel file. Please check the file format and try again.');
@@ -101,7 +112,7 @@ export default function TimetableGenerator() {
         { id: 'teacher_2', name: 'Jane Smith', constraints: { 'Tuesday': { start: 3, end: 8 } } },
       ],
       classes: [
-        { id: 'class_1', name: 'Class 10A', subjects: ['subject_1', 'subject_2'], labs: [{ subjectId: 'subject_2', duration: 2 }] },
+        { id: 'class_1', name: 'Class 10A', subjects: ['subject_1', 'subject_2'], labs: [] },
       ],
       timetables: [
         {
@@ -115,13 +126,6 @@ export default function TimetableGenerator() {
             }))
           ),
         },
-      ],
-      intervals: [
-        { day: 'Monday', period: 4 },
-        { day: 'Tuesday', period: 4 },
-        { day: 'Wednesday', period: 4 },
-        { day: 'Thursday', period: 4 },
-        { day: 'Friday', period: 4 },
       ],
     };
     setBulkUploadData(JSON.stringify(sampleData, null, 2));
@@ -145,10 +149,6 @@ export default function TimetableGenerator() {
             if (slot.day === day && slot.period === period) {
               return { ...slot, subjectId: null, isLab: false };
             }
-            // If this is the second period of a lab, also clear it
-            if (slot.day === day && slot.period === period + 1 && slot.isLab) {
-              return { ...slot, subjectId: null, isLab: false };
-            }
             return slot;
           })
         };
@@ -161,7 +161,7 @@ export default function TimetableGenerator() {
     setEditingSlot({ classId, day, period });
   };
 
-  const saveEditedSlot = (subjectId: string, isLab: boolean) => {
+  const saveEditedSlot = (subjectId: string) => {
     if (editingSlot) {
       setTimetables(timetables.map(timetable => {
         if (timetable.classId === editingSlot.classId) {
@@ -169,11 +169,7 @@ export default function TimetableGenerator() {
             ...timetable,
             slots: timetable.slots.map(slot => {
               if (slot.day === editingSlot.day && slot.period === editingSlot.period) {
-                return { ...slot, subjectId, isLab };
-              }
-              // If it's a lab, update the next slot as well
-              if (isLab && slot.day === editingSlot.day && slot.period === editingSlot.period + 1) {
-                return { ...slot, subjectId, isLab };
+                return { ...slot, subjectId, isLab: false };
               }
               return slot;
             })
@@ -183,14 +179,6 @@ export default function TimetableGenerator() {
       }));
       setEditingSlot(null);
     }
-  };
-
-  const addInterval = (day: string, period: number) => {
-    setIntervals([...intervals, { day, period }]);
-  };
-
-  const removeInterval = (day: string, period: number) => {
-    setIntervals(intervals.filter(interval => !(interval.day === day && interval.period === period)));
   };
 
   return (
@@ -258,7 +246,6 @@ export default function TimetableGenerator() {
             teachers={teachers}
             classes={classes}
             view={selectedView}
-            intervals={intervals}
             onRemoveSlot={removeSlot}
             onEditSlot={editSlot}
           />
@@ -283,7 +270,7 @@ export default function TimetableGenerator() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-4 rounded-lg">
             <h3 className="text-lg font-semibold mb-2">Edit Slot</h3>
-            <Select onValueChange={(value) => saveEditedSlot(value, false)}>
+            <Select onValueChange={saveEditedSlot}>
               <SelectTrigger>
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
@@ -295,49 +282,10 @@ export default function TimetableGenerator() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={() => saveEditedSlot(editingSlot.subjectId, true)} className="mt-2 mr-2">
-              Set as Lab
-            </Button>
             <Button onClick={() => setEditingSlot(null)} className="mt-2">Cancel</Button>
           </div>
         </div>
       )}
-      <div className="mt-4">
-        <h2 className="text-xl font-semibold mb-2">Manage Intervals</h2>
-        <div className="flex space-x-2 mb-2">
-          <Select onValueChange={(value) => setEditingSlot({ ...editingSlot!, day: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select day" />
-            </SelectTrigger>
-            <SelectContent>
-              {DAYS.map((day) => (
-                <SelectItem key={day} value={day}>{day}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select onValueChange={(value) => setEditingSlot({ ...editingSlot!, period: parseInt(value) })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: PERIODS_PER_DAY }, (_, i) => (
-                <SelectItem key={i} value={i.toString()}>{i + 1}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => addInterval(editingSlot!.day, editingSlot!.period)}>Add Interval</Button>
-        </div>
-        <div>
-          {intervals.map((interval, index) => (
-            <div key={index} className="flex items-center space-x-2 mb-1">
-              <span>{interval.day} - Period {interval.period + 1}</span>
-              <Button variant="outline" size="sm" onClick={() => removeInterval(interval.day, interval.period)}>
-                Remove
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
