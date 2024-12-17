@@ -1,4 +1,5 @@
 import React from "react";
+import { saveTimetableToDatabase } from '@/utils/timetableService';
 
 class TimetableGA {
     constructor(classes, subjects, teachers, populationSize, maxGenerations) {
@@ -94,20 +95,51 @@ class TimetableGA {
         return this.bestSchedule;
     }
 }
-
-function TimetableGenerator({ classes, subjects, teachers, setGeneratedTimetable }) {
-    const generateTimetable = () => {
+function TimetableGenerator({ classes, subjects, teachers, setGeneratedTimetable, userData }) {
+    const generateTimetable = async () => {
         if (classes.length === 0 || subjects.length === 0 || teachers.length === 0) {
             alert("Please add classes, subjects, and teachers.");
             return;
         }
 
-        const ga = new TimetableGA(classes, subjects, teachers, 10, 100);
-        const bestSchedule = ga.run();
-        setGeneratedTimetable(bestSchedule);
+        try {
+            const ga = new TimetableGA(classes, subjects, teachers, 10, 100);
+            const bestSchedule = ga.run();
+            
+            // Save the generated timetable to Supabase
+            const timetableData = {
+                schedule: bestSchedule,
+                classes,
+                subjects,
+                teachers,
+                generatedAt: new Date().toISOString()
+            };
+
+            const { success, error } = await saveTimetableToDatabase(timetableData, userData.id);
+            
+            if (!success) {
+                throw error;
+            }
+
+            setGeneratedTimetable(bestSchedule);
+        } catch (error) {
+            console.error('Error generating and saving timetable:', error);
+            alert('There was an error saving the timetable. Please try again.');
+        }
     };
 
-    return <button onClick={generateTimetable}>Generate Timetable</button>;
+    return (
+        <div className="pl-4">
+            <button 
+                onClick={generateTimetable}
+                className="relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800"
+            >
+                <span className="relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0 cursor-pointer">
+                    Generate Timetable
+                </span>
+            </button>
+        </div>
+    );
 }
 
 export default TimetableGenerator;
