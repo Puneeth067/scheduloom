@@ -14,6 +14,8 @@ import TeacherForm from './TeacherForm';
 import ClassForm from './ClassForm';
 import TimetableView from './TimetableView';
 import TimetableEditForm from './TimetableEditForm';
+import { Calendar, User, Users } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function TimetableGenerator() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -182,26 +184,42 @@ export default function TimetableGenerator() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">College Timetable Generator</h1>
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <SubjectForm onSubmit={addSubject} teachers={teachers} />
-        <TeacherForm onSubmit={addTeacher} />
-        <ClassForm onSubmit={addClass} subjects={subjects} />
-      </div>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold mb-2">Bulk Upload</h2>
-        <Textarea
-          value={bulkUploadData}
-          onChange={(e) => setBulkUploadData(e.target.value)}
-          placeholder="Paste JSON data here"
-          className="mb-2"
-        />
-        <Button onClick={handleBulkUpload} className="mr-2">Upload JSON</Button>
-        <Button onClick={getSampleData} variant="outline" className="mr-2">Get Sample Data</Button>
-        <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-          Upload Excel
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center bg-gradient-to-r from-purple-600 via-blue-600 to-emerald-600 bg-clip-text text-transparent">
+          College Timetable Generator
+        </h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <SubjectForm onSubmit={addSubject} teachers={teachers} />
+          <TeacherForm onSubmit={addTeacher} />
+          <ClassForm onSubmit={addClass} subjects={subjects} />
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Bulk Upload</h2>
+          <Textarea
+            value={bulkUploadData}
+            onChange={(e) => setBulkUploadData(e.target.value)}
+            placeholder="Paste JSON data here"
+            className="mb-4 min-h-[200px] border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+          />
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={handleBulkUpload} className="bg-purple-600 hover:bg-purple-700">
+              Upload JSON
+            </Button>
+            <Button onClick={getSampleData} variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+              Get Sample Data
+            </Button>
+            <Button 
+              onClick={() => fileInputRef.current?.click()} 
+              variant="outline"
+              className="border-purple-200 text-purple-700 hover:bg-purple-50"
+            >
+              Upload Excel
+            </Button>
+          </div>
+        </div>
         <input
           type="file"
           ref={fileInputRef}
@@ -210,34 +228,79 @@ export default function TimetableGenerator() {
           style={{ display: 'none' }}
         />
       </div>
-      <Button onClick={generateTimetablesHandler} className="mb-4">Generate Timetables</Button>
-      <div className="mb-4">
-        <Label htmlFor="viewSelect">View</Label>
-        <Select onValueChange={(value: 'teacher' | 'student') => setSelectedView(value)}>
-          <SelectTrigger id="viewSelect">
-            <SelectValue placeholder="Select view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="student">Student View</SelectItem>
-            <SelectItem value="teacher">Teacher View</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      {selectedView === 'student' && (
-        <div className="mb-4">
-          <Label htmlFor="classSelect">Class</Label>
-          <Select onValueChange={(value: string) => setSelectedClass(value)}>
-            <SelectTrigger id="classSelect">
-              <SelectValue placeholder="Select class" />
-            </SelectTrigger>
-            <SelectContent>
-              {classes.map((cls) => (
-                <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <Card className="w-full max-w-6xl mx-auto bg-white shadow-lg mb-6">
+      <CardContent className="pt-6 pb-6">
+        <div className="space-y-6">
+          {/* Generate Button */}
+          <Button 
+            onClick={generateTimetablesHandler}
+            className="w-auto bg-indigo-500 hover:bg-indigo-600 text-white font-medium flex items-center justify-center gap-2"
+            size="lg"
+          >
+            <Calendar className="w-5 h-5" />
+            Generate Timetables
+          </Button>
+
+          {/* View Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-500" />
+              View Type
+            </Label>
+            <Select onValueChange={(value: 'teacher' | 'student') => setSelectedView(value)}>
+              <SelectTrigger 
+                id="viewSelect"
+                className="w-full border-gray-200 focus:border-indigo-500"
+              >
+                <SelectValue placeholder="Select view" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="student">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Student View
+                  </div>
+                </SelectItem>
+                <SelectItem value="teacher">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Teacher View
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Class Selection - Only shown for student view */}
+          {selectedView === 'student' && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-500" />
+                Select Class
+              </Label>
+              <Select onValueChange={(value: string) => setSelectedClass(value)}>
+                <SelectTrigger 
+                  id="classSelect"
+                  className="w-full border-gray-200 focus:border-indigo-500"
+                >
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        {cls.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
-      )}
+      </CardContent>
+    </Card>
       {timetables.length > 0 && (
         <div className="mb-4">
           <TimetableView
@@ -248,10 +311,11 @@ export default function TimetableGenerator() {
             view={selectedView}
             onRemoveSlot={removeSlot}
             onEditSlot={editSlot}
+            onRemoveTimetable={(classId) => setTimetables(timetables.filter(t => t.classId !== classId))}
           />
           {selectedView === 'student' && selectedClass && (
-            <div className="mt-4">
-              <Button onClick={() => startEditingTimetable(timetables.find((t) => t.classId === selectedClass)!)} className="mr-2">
+            <div className="left-4 mt-4">
+              <Button onClick={() => startEditingTimetable(timetables.find((t) => t.classId === selectedClass)!)} className="mr-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
                 Edit Timetable
               </Button>
             </div>
