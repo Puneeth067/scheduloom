@@ -92,6 +92,7 @@ export default function TimetableEditForm({
         title: "Success",
         description: "Timetable and associated class deleted successfully",
       });
+      window.location.reload();
     } catch (error) {
       console.error('Error deleting timetable and class:', error);
       toast({

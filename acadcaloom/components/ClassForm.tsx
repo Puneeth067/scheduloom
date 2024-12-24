@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Book, Beaker, X, GraduationCap } from 'lucide-react';
 import { Class, Subject } from '../types';
+import { toast } from '@/hooks/use-toast';
 
 interface ClassFormProps {
   onSubmit: (classData: Omit<Class, 'id'>) => void;
@@ -14,11 +15,21 @@ interface ClassFormProps {
 }
 
 export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
-  const { register, handleSubmit, reset } = useForm<Omit<Class, 'id'>>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<Omit<Class, 'id'>>();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [labs, setLabs] = useState<{ subject_id: string; duration: number }[]>([]);
 
   const onSubmitForm = (data: Omit<Class, 'id'>) => {
+    // Validate that at least one subject is selected
+    if (selectedSubjects.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one subject",
+        variant: "destructive"
+      });
+      return;
+    }
+
     onSubmit({ ...data, subjects: selectedSubjects, labs });
     reset();
     setSelectedSubjects([]);

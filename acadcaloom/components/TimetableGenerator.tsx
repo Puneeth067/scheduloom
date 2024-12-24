@@ -117,6 +117,20 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
 
   const addClass = async (classData: Omit<Class, 'id'>) => {
     try {
+      // Check if a class with the same name already exists
+      const existingClass = classes.find(
+        cls => cls.name.toLowerCase() === classData.name.toLowerCase()
+      );
+      
+      if (existingClass) {
+        toast({
+          title: "Error",
+          description: `A class with the name "${classData.name}" already exists`,
+          variant: "destructive"
+        });
+        return;
+      }
+  
       const newClass = {
         ...classData,
         user_id: session?.user?.id,
@@ -135,7 +149,7 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
       console.error('Error adding class:', error);
       toast({
         title: "Error",
-        description: "Failed to add class",
+        description: error instanceof Error ? error.message : "Failed to add class",
         variant: "destructive"
       });
     }
