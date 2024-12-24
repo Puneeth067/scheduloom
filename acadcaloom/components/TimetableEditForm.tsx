@@ -29,8 +29,8 @@ export default function TimetableEditForm({
   onDelete 
 }: TimetableEditFormProps) {
   const [editedTimetable, setEditedTimetable] = useState<Timetable>(timetable);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Initialize with existing timetable data
   useEffect(() => {
     setEditedTimetable(timetable);
   }, [timetable]);
@@ -55,8 +55,11 @@ export default function TimetableEditForm({
 
   const handleSave = async () => {
     try {
-      // Save the timetable to the database
-      await dataService.updateTimetable(editedTimetable.id, editedTimetable);
+      if (editedTimetable.id) {
+        await dataService.updateTimetable(editedTimetable.id, editedTimetable);
+      } else {
+        throw new Error('Timetable ID is undefined');
+      }
       onSave(editedTimetable);
       toast({
         title: "Success",
@@ -74,19 +77,30 @@ export default function TimetableEditForm({
 
   const handleDelete = async () => {
     try {
-      await dataService.deleteTimetable(editedTimetable.id);
+      setIsDeleting(true);
+      // Delete the timetable
+      if (editedTimetable.id) {
+        await dataService.deleteTimetable(editedTimetable.id);
+      } else {
+        throw new Error('Timetable ID is undefined');
+      }
+      // Delete the associated class
+      await dataService.deleteClass(editedTimetable.class_id);
+      
       onDelete(editedTimetable.id);
       toast({
         title: "Success",
-        description: "Timetable deleted successfully",
+        description: "Timetable and associated class deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting timetable:', error);
+      console.error('Error deleting timetable and class:', error);
       toast({
         title: "Error",
-        description: "Failed to delete timetable",
+        description: "Failed to delete timetable and class",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -96,21 +110,27 @@ export default function TimetableEditForm({
 
   return (
     <Card className="w-full bg-white shadow-lg rounded-lg overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex flex-row justify-between ">
-        <CardTitle className="text-2xl items-center font-bold">Edit Timetable - {classes.find(c => c.id === editedTimetable.class_id)?.name}</CardTitle>
+      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex flex-row justify-between">
+        <CardTitle className="text-2xl items-center font-bold">
+          Edit Timetable - {classes.find(c => c.id === editedTimetable.class_id)?.name}
+        </CardTitle>
         <div className="flex justify-end">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="flex items-center gap-2">
+              <Button 
+                variant="destructive" 
+                className="flex items-center gap-2"
+                disabled={isDeleting}
+              >
                 <Trash2Icon size={16} />
-                Delete Timetable
+                {isDeleting ? 'Deleting...' : 'Delete Timetable'}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete the timetable. This action cannot be undone.
+                  This will permanently delete both the timetable and its associated class. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
