@@ -14,13 +14,27 @@ interface SubjectFormProps {
 }
 
 export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
-  const { register, control, handleSubmit, reset } = useForm<Omit<Subject, 'id' | 'color'>>();
+  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm<Omit<Subject, 'id' | 'color'>>({
+    defaultValues: {
+      name: '',
+      teacher_id: '', // Initialize teacher_id
+      constraints: []
+    }
+  });
+
   const { fields, append, remove } = useFieldArray({
     control,
     name: "constraints",
   });
 
   const onSubmitForm = (data: Omit<Subject, 'id' | 'color'>) => {
+    // Validate that a teacher is selected
+    if (!data.teacher_id) {
+      alert('Please select a teacher');
+      return;
+    }
+
+    console.log('Submitting subject with data:', data); // Debug log
     onSubmit(data);
     reset();
   };
@@ -49,18 +63,24 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                 id="subjectName"
                 className="w-full border-gray-200 focus:border-blue-500 focus:ring-blue-500 transition-colors"
                 placeholder="Enter subject name"
-                {...register('name', { required: true })}
+                {...register('name', { required: 'Subject name is required' })}
               />
+              {errors.name && (
+                <span className="text-red-500 text-sm">{errors.name.message}</span>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subjectTeacher" className="text-sm font-medium">
+              <Label htmlFor="teacher_id" className="text-sm font-medium">
                 Assigned Teacher
               </Label>
               <Select 
-                onValueChange={(value) => register('teacher_id').onChange({ target: { value } })}
+                onValueChange={(value) => {
+                  setValue('teacher_id', value);
+                  console.log('Selected teacher_id:', value); // Debug log
+                }}
               >
-                <SelectTrigger id="subjectTeacher" className="w-full">
+                <SelectTrigger id="teacher_id" className="w-full">
                   <SelectValue placeholder="Select a teacher" />
                 </SelectTrigger>
                 <SelectContent>
@@ -71,6 +91,9 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.teacher_id && (
+                <span className="text-red-500 text-sm">Please select a teacher</span>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -80,7 +103,7 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ day: '', start: 1, end: 8 })}
+                  onClick={() => append({ day: DAYS[0], start: 1, end: 8 })}
                   className="h-8"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -93,10 +116,8 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                   <div key={field.id} className="p-4 rounded-lg bg-gray-50">
                     <div className="flex flex-wrap gap-3 items-center">
                       <Select 
-                        onValueChange={(value) => 
-                          register(`constraints.${index}.day`).onChange({ target: { value } })
-                        }
-                        className="flex-1 min-w-[150px]"
+                        defaultValue={field.day}
+                        onValueChange={(value) => setValue(`constraints.${index}.day`, value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select day" />
@@ -115,7 +136,10 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                           min="1"
                           max="8"
                           className="w-24"
-                          {...register(`constraints.${index}.start` as const, { valueAsNumber: true })}
+                          {...register(`constraints.${index}.start` as const, { 
+                            valueAsNumber: true,
+                            required: 'Start period is required'
+                          })}
                         />
                         <Input
                           type="number"
@@ -123,7 +147,10 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                           min="1"
                           max="8"
                           className="w-24"
-                          {...register(`constraints.${index}.end` as const, { valueAsNumber: true })}
+                          {...register(`constraints.${index}.end` as const, { 
+                            valueAsNumber: true,
+                            required: 'End period is required'
+                          })}
                         />
                       </div>
 
@@ -143,7 +170,10 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
             </div>
           </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+          <Button 
+            type="submit" 
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
             Add Subject
           </Button>
         </form>

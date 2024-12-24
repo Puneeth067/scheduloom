@@ -30,40 +30,45 @@ export default function TimetableView({
     return classData ? classData.name : '';
   };
 
-  const getTeacherSchedule = (teacher_id: string) => {
+  const getTeacherSchedule = (teacher_id: string, timetables: Timetable[], subjects: Subject[], classes: Class[]) => {
     const schedule: { [key: string]: { className: string; subjectName: string }[] } = {};
+    
+    // Initialize schedule with correct period count
     DAYS.forEach(day => {
       schedule[day] = Array(PERIODS_PER_DAY).fill(null);
     });
-
+  
     timetables.forEach(timetable => {
       timetable.slots.forEach(slot => {
-        const subject = subjects.find(s => s.id === slot.subject_id);
-        if (subject && subject.teacher_id === teacher_id) {
-          schedule[slot.day][slot.period] = {
-            className: getClassName(timetable.class_id),
-            subjectName: subject.name,
-          };
+        if (!slot.is_interval && slot.subject_id) {
+          const subject = subjects.find(s => s.id === slot.subject_id);
+          if (subject && subject.teacher_id === teacher_id) {
+            schedule[slot.day][slot.period] = {
+              className: classes.find(c => c.id === timetable.class_id)?.name || '',
+              subjectName: subject.name,
+            };
+          }
         }
       });
     });
-
+  
     return schedule;
   };
-
+  
   const isInterval = (period: number) => {
     return period === 2 || period === 4;
   };
 
   const renderCell = (slot: any, timetable: Timetable) => {
-    const subject = subjects.find(s => s.id === slot?.subject_id);
+    if (!slot) return null;
+    const subject = subjects.find(s => s.id === slot.subject_id);
 
     return (
       <div className="p-2">
-        {slot && (
+        {slot && !slot.is_interval && (
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-700">{getSubjectName(slot.subject_id)}</span>
-            {slot.isLab && <BeakerIcon size={16} className="text-purple-600" />}
+            {slot.is_lab && <BeakerIcon size={16} className="text-purple-600" />}
           </div>
         )}
       </div>
@@ -95,32 +100,34 @@ export default function TimetableView({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {DAYS.map((day) => (
-                      <TableRow key={day} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-gray-700">{day}</TableCell>
-                        {Array.from({ length: PERIODS_PER_DAY }, (_, period) => {
-                          const schedule = getTeacherSchedule(teacher.id);
-                          const slot = schedule[day][period];
-                          if (isInterval(period)) {
+                    {DAYS.map((day) => {
+                      const schedule = getTeacherSchedule(teacher.id, timetables, subjects, classes)[day];
+                      return (
+                        <TableRow key={day} className="hover:bg-gray-50">
+                          <TableCell className="font-medium text-gray-700">{day}</TableCell>
+                          {Array.from({ length: PERIODS_PER_DAY }, (_, period) => {
+                            if (isInterval(period)) {
+                              return (
+                                <TableCell key={period} className="bg-gray-100 text-center text-sm text-gray-500">
+                                  Break Time
+                                </TableCell>
+                              );
+                            }
+                            const slot = schedule[period];
                             return (
-                              <TableCell key={period} className="bg-gray-100 text-center text-sm text-gray-500">
-                                Break Time
+                              <TableCell key={period} className="text-center">
+                                {slot && (
+                                  <div className="p-2 bg-indigo-50 rounded-lg">
+                                    <div className="font-medium text-indigo-700">{slot.className}</div>
+                                    <div className="text-sm text-indigo-600">{slot.subjectName}</div>
+                                  </div>
+                                )}
                               </TableCell>
                             );
-                          }
-                          return (
-                            <TableCell key={period} className="text-center">
-                              {slot && (
-                                <div className="p-2 bg-indigo-50 rounded-lg">
-                                  <div className="font-medium text-indigo-700">{slot.className}</div>
-                                  <div className="text-sm text-indigo-600">{slot.subjectName}</div>
-                                </div>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
+                          })}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
