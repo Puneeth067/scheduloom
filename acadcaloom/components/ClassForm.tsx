@@ -16,7 +16,7 @@ interface ClassFormProps {
 export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
   const { register, handleSubmit, reset } = useForm<Omit<Class, 'id'>>();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [labs, setLabs] = useState<{ subjectId: string; duration: number }[]>([]);
+  const [labs, setLabs] = useState<{ subject_id: string; duration: number }[]>([]);
 
   const onSubmitForm = (data: Omit<Class, 'id'>) => {
     onSubmit({ ...data, subjects: selectedSubjects, labs });
@@ -25,13 +25,13 @@ export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
     setLabs([]);
   };
 
-  const addLab = (subjectId: string, duration: number) => {
-    setLabs([...labs, { subjectId, duration }]);
+  const addLab = (subject_id: string, duration: number) => {
+    setLabs([...labs, { subject_id, duration }]);
   };
 
-  const removeSubject = (subjectId: string) => {
-    setSelectedSubjects(selectedSubjects.filter(id => id !== subjectId));
-    setLabs(labs.filter(lab => lab.subjectId !== subjectId));
+  const removeSubject = (subject_id: string) => {
+    setSelectedSubjects(selectedSubjects.filter(id => id !== subject_id));
+    setLabs(labs.filter(lab => lab.subject_id !== subject_id));
   };
 
   return (
@@ -85,12 +85,12 @@ export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
             </Select>
 
             <div className="space-y-3">
-              {selectedSubjects.map((subjectId) => {
-                const subject = subjects.find((s) => s.id === subjectId);
-                const hasLab = labs.some(lab => lab.subjectId === subjectId);
+              {selectedSubjects.map((subject_id) => {
+                const subject = subjects.find((s) => s.id === subject_id);
+                const hasLab = labs.some(lab => lab.subject_id === subject_id);
                 
                 return (
-                  <div key={subjectId} className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={subject_id} className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Book className="h-4 w-4 text-purple-600" />
@@ -102,7 +102,7 @@ export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => addLab(subjectId, 2)}
+                            onClick={() => addLab(subject_id, 2)}
                             className="h-8 border-purple-200 text-purple-700 hover:bg-purple-50"
                           >
                             <Beaker className="h-4 w-4 mr-2" />
@@ -113,7 +113,7 @@ export default function ClassForm({ onSubmit, subjects }: ClassFormProps) {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeSubject(subjectId)}
+                          onClick={() => removeSubject(subject_id)}
                           className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
                         >
                           <X className="h-4 w-4" />

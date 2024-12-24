@@ -1,8 +1,9 @@
 export interface Subject {
   id: string;
   name: string;
-  color: string;
-  teacherId: string;
+  teacher_id: string; // Changed from teacherId to match database column
+  color?: string;
+  user_id: string;
   constraints?: {
     [day: string]: { start: number; end: number } | null;
   };
@@ -20,19 +21,23 @@ export interface Class {
   id: string;
   name: string;
   subjects: string[];
-  labs: { subjectId: string; duration: number }[];
+  labs: { subject_id: string; duration: number }[];
 }
 
 export interface TimeSlot {
   day: string;
   period: number;
-  subjectId: string | null;
-  isLab: boolean;
+  subject_id: string | null; // Changed from subjectId to match database
+  is_lab: boolean; // Changed from isLab to match database
+  is_interval?: boolean; // Changed from isInterval to match database
 }
 
 export interface Timetable {
-  classId: string;
+  id?: string;
+  class_id: string; // Changed from classId to match database
+  user_id: string;
   slots: TimeSlot[];
+  created_at?: string;
 }
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];

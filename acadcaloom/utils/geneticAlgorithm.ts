@@ -5,12 +5,12 @@ function generateInitialPopulation(classes: Class[], populationSize: number): Ti
 
   for (let i = 0; i < populationSize; i++) {
     const timetables = classes.map((cls) => ({
-      classId: cls.id,
+      class_id: cls.id,
       slots: DAYS.flatMap((day) =>
         Array.from({ length: PERIODS_PER_DAY }, (_, period) => ({
           day,
           period,
-          subjectId: cls.subjects[Math.floor(Math.random() * cls.subjects.length)],
+          subject_id: cls.subjects[Math.floor(Math.random() * cls.subjects.length)],
           isLab: false,
         }))
       ),
@@ -28,8 +28,8 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
   // Check for teacher conflicts
   const teacherSlots: { [teacherId: string]: Set<string> } = {};
   timetable.slots.forEach((slot) => {
-    if (slot.subjectId) {
-      const subject = subjects.find(s => s.id === slot.subjectId);
+    if (slot.subject_id) {
+      const subject = subjects.find(s => s.id === slot.subject_id);
       if (subject) {
         const teacherId = subject.teacherId;
         if (!teacherSlots[teacherId]) {
@@ -48,7 +48,7 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
   // Check for continuous subjects
   let continuousSubjects = 0;
   for (let i = 1; i < timetable.slots.length; i++) {
-    if (timetable.slots[i].subjectId === timetable.slots[i - 1].subjectId) {
+    if (timetable.slots[i].subject_id === timetable.slots[i - 1].subject_id) {
       continuousSubjects++;
       if (continuousSubjects > 2) {
         fitness -= 5; // Penalize more than 2 continuous subjects
@@ -60,8 +60,8 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
 
   // Check for teacher constraints
   timetable.slots.forEach((slot) => {
-    if (slot.subjectId) {
-      const subject = subjects.find(s => s.id === slot.subjectId);
+    if (slot.subject_id) {
+      const subject = subjects.find(s => s.id === slot.subject_id);
       if (subject) {
         const teacher = teachers.find((t) => t.id === subject.teacherId);
         if (teacher && teacher.constraints[slot.day]) {
@@ -76,8 +76,8 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
 
   // Check for subject constraints
   timetable.slots.forEach((slot) => {
-    if (slot.subjectId) {
-      const subject = subjects.find(s => s.id === slot.subjectId);
+    if (slot.subject_id) {
+      const subject = subjects.find(s => s.id === slot.subject_id);
       if (subject && subject.constraints && subject.constraints[slot.day]) {
         const { start, end } = subject.constraints[slot.day]!;
         if (slot.period < start || slot.period > end) {
@@ -88,14 +88,14 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
   });
 
   // Check for lab sessions
-  const classData = classes.find((c) => c.id === timetable.classId);
+  const classData = classes.find((c) => c.id === timetable.class_id);
   if (classData) {
     classData.labs.forEach((lab) => {
       let labFound = false;
       for (let i = 0; i < timetable.slots.length - 1; i++) {
         if (
-          timetable.slots[i].subjectId === lab.subjectId &&
-          timetable.slots[i + 1].subjectId === lab.subjectId &&
+          timetable.slots[i].subject_id === lab.subject_id &&
+          timetable.slots[i + 1].subject_id === lab.subject_id &&
           timetable.slots[i].day === timetable.slots[i + 1].day &&
           timetable.slots[i].period === timetable.slots[i + 1].period - 1
         ) {
@@ -114,7 +114,7 @@ function calculateFitness(timetable: Timetable, classes: Class[], teachers: Teac
 
 function crossover(parent1: Timetable, parent2: Timetable): Timetable {
   const child: Timetable = {
-    classId: parent1.classId,
+    class_id: parent1.class_id,
     slots: [],
   };
 
@@ -130,15 +130,15 @@ function crossover(parent1: Timetable, parent2: Timetable): Timetable {
 
 function mutate(timetable: Timetable, classes: Class[], mutationRate: number): Timetable {
   const mutatedTimetable: Timetable = {
-    classId: timetable.classId,
+    class_id: timetable.class_id,
     slots: timetable.slots.map((slot) => ({ ...slot })),
   };
 
   mutatedTimetable.slots.forEach((slot, index) => {
     if (Math.random() < mutationRate) {
-      const classData = classes.find((c) => c.id === timetable.classId);
+      const classData = classes.find((c) => c.id === timetable.class_id);
       if (classData) {
-        slot.subjectId = classData.subjects[Math.floor(Math.random() * classData.subjects.length)];
+        slot.subject_id = classData.subjects[Math.floor(Math.random() * classData.subjects.length)];
       }
     }
   });
@@ -185,10 +185,10 @@ export function generateTimetables(
   }
 
   // Return the best timetable for each class
-  const bestTimetables: { [classId: string]: Timetable } = {};
+  const bestTimetables: { [class_id: string]: Timetable } = {};
   population.forEach((timetable) => {
-    if (!bestTimetables[timetable.classId] || calculateFitness(timetable, classes, teachers, subjects) > calculateFitness(bestTimetables[timetable.classId], classes, teachers, subjects)) {
-      bestTimetables[timetable.classId] = timetable;
+    if (!bestTimetables[timetable.class_id] || calculateFitness(timetable, classes, teachers, subjects) > calculateFitness(bestTimetables[timetable.class_id], classes, teachers, subjects)) {
+      bestTimetables[timetable.class_id] = timetable;
     }
   });
 
