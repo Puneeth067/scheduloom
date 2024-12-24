@@ -17,7 +17,8 @@ import TimetableEditForm from './TimetableEditForm';
 import { Calendar, User, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
-export default function TimetableGenerator() {
+
+export default function TimetableGenerator({ session, userData, setUserData }: TimetableGeneratorProps) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -354,3 +355,8 @@ export default function TimetableGenerator() {
   );
 }
 
+interface TimetableGeneratorProps {
+  session?: any;
+  userData?: any;
+  setUserData?: (data: any) => void;
+}
