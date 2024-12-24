@@ -19,18 +19,18 @@ export default function TimetableView({
   classes,
   view,
 }: TimetableViewProps) {
-  const getSubjectName = (subjectId: string | null) => {
-    if (!subjectId) return '';
-    const subject = subjects.find((s) => s.id === subjectId);
+  const getSubjectName = (subject_id: string | null) => {
+    if (!subject_id) return '';
+    const subject = subjects.find((s) => s.id === subject_id);
     return subject ? subject.name : '';
   };
 
-  const getClassName = (classId: string) => {
-    const classData = classes.find((c) => c.id === classId);
+  const getClassName = (class_id: string) => {
+    const classData = classes.find((c) => c.id === class_id);
     return classData ? classData.name : '';
   };
 
-  const getTeacherSchedule = (teacherId: string) => {
+  const getTeacherSchedule = (teacher_id: string) => {
     const schedule: { [key: string]: { className: string; subjectName: string }[] } = {};
     DAYS.forEach(day => {
       schedule[day] = Array(PERIODS_PER_DAY).fill(null);
@@ -38,10 +38,10 @@ export default function TimetableView({
 
     timetables.forEach(timetable => {
       timetable.slots.forEach(slot => {
-        const subject = subjects.find(s => s.id === slot.subjectId);
-        if (subject && subject.teacherId === teacherId) {
+        const subject = subjects.find(s => s.id === slot.subject_id);
+        if (subject && subject.teacher_id === teacher_id) {
           schedule[slot.day][slot.period] = {
-            className: getClassName(timetable.classId),
+            className: getClassName(timetable.class_id),
             subjectName: subject.name,
           };
         }
@@ -56,13 +56,13 @@ export default function TimetableView({
   };
 
   const renderCell = (slot: any, timetable: Timetable) => {
-    const subject = subjects.find(s => s.id === slot?.subjectId);
+    const subject = subjects.find(s => s.id === slot?.subject_id);
 
     return (
       <div className="p-2">
         {slot && (
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700">{getSubjectName(slot.subjectId)}</span>
+            <span className="font-medium text-gray-700">{getSubjectName(slot.subject_id)}</span>
             {slot.isLab && <BeakerIcon size={16} className="text-purple-600" />}
           </div>
         )}
@@ -134,11 +134,11 @@ export default function TimetableView({
   return (
     <div className="space-y-8">
       {timetables.map(timetable => (
-        <Card key={timetable.classId} className="bg-white shadow-lg rounded-lg overflow-hidden">
+        <Card key={timetable.class_id} className="bg-white shadow-lg rounded-lg overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
             <CardTitle className="flex items-center gap-2 text-2xl">
               <GraduationCap className="h-6 w-6" />
-              {getClassName(timetable.classId)}
+              {getClassName(timetable.class_id)}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -171,7 +171,7 @@ export default function TimetableView({
                           <TableCell
                             key={period}
                             className="transition-all duration-200"
-                            style={{ backgroundColor: slot ? `${subjects.find(s => s.id === slot.subjectId)?.color}20` : '' }}
+                            style={{ backgroundColor: slot ? `${subjects.find(s => s.id === slot.subject_id)?.color}20` : '' }}
                           >
                             {renderCell(slot, timetable)}
                           </TableCell>

@@ -3,17 +3,31 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Timetable, Subject, DAYS, PERIODS_PER_DAY } from '../types';
-import { BeakerIcon, XCircleIcon } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Timetable, Subject, Teacher, Class, DAYS, PERIODS_PER_DAY } from '../types';
+import { BeakerIcon, XCircleIcon, Trash2Icon, Save, X } from 'lucide-react';
+import { dataService } from '@/services/dataService';
+import { toast } from '@/hooks/use-toast';
 
 interface TimetableEditFormProps {
   timetable: Timetable;
   subjects: Subject[];
+  teachers: Teacher[];
+  classes: Class[];
   onSave: (editedTimetable: Timetable) => void;
   onCancel: () => void;
+  onDelete: (timetableId: string) => void;
 }
 
-export default function TimetableEditForm({ timetable, subjects, onSave, onCancel }: TimetableEditFormProps) {
+export default function TimetableEditForm({ 
+  timetable, 
+  subjects, 
+  teachers, 
+  classes,
+  onSave, 
+  onCancel,
+  onDelete 
+}: TimetableEditFormProps) {
   const [editedTimetable, setEditedTimetable] = useState<Timetable>(timetable);
 
   const handleSlotChange = (day: string, period: number, subjectId: string | null, isLab: boolean) => {
@@ -30,14 +44,73 @@ export default function TimetableEditForm({ timetable, subjects, onSave, onCance
     handleSlotChange(day, period, null, false);
   };
 
+  const handleSave = async () => {
+    try {
+      // Save the timetable to the database
+      await dataService.updateTimetable(editedTimetable.id, editedTimetable);
+      onSave(editedTimetable);
+      toast({
+        title: "Success",
+        description: "Timetable updated successfully",
+      });
+    } catch (error) {
+      console.error('Error saving timetable:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save timetable",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await dataService.deleteTimetable(editedTimetable.id);
+      onDelete(editedTimetable.id);
+      toast({
+        title: "Success",
+        description: "Timetable deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting timetable:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete timetable",
+        variant: "destructive"
+      });
+    }
+  };
+
   const isInterval = (period: number) => {
     return period === 2 || period === 4;
   };
 
   return (
     <Card className="w-full bg-white shadow-lg rounded-lg overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex justify-between items-center">
         <CardTitle className="text-2xl font-bold">Edit Timetable</CardTitle>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="flex items-center gap-2">
+                <Trash2Icon size={16} />
+                Delete Timetable
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the timetable. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         <div className="overflow-x-auto">
@@ -113,20 +186,22 @@ export default function TimetableEditForm({ timetable, subjects, onSave, onCance
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
         </div>
         <div className="mt-6 flex gap-4">
           <Button
-            onClick={() => onSave(editedTimetable)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 flex items-center gap-2"
           >
+            <Save size={16} />
             Save Changes
           </Button>
           <Button
             onClick={onCancel}
             variant="outline"
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
           >
+            <X size={16} />
             Cancel
           </Button>
         </div>

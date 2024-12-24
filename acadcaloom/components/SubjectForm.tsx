@@ -58,7 +58,7 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                 Assigned Teacher
               </Label>
               <Select 
-                onValueChange={(value) => register('teacherId').onChange({ target: { value } })}
+                onValueChange={(value) => register('teacher_id').onChange({ target: { value } })}
               >
                 <SelectTrigger id="subjectTeacher" className="w-full">
                   <SelectValue placeholder="Select a teacher" />

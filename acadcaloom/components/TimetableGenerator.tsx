@@ -1,7 +1,6 @@
 'use client'
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +15,9 @@ import TimetableView from './TimetableView';
 import TimetableEditForm from './TimetableEditForm';
 import { Calendar, User, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { dataService } from '@/services/dataService';
+import { toast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 
 export default function TimetableGenerator({ session, userData, setUserData }: TimetableGeneratorProps) {
@@ -23,55 +25,216 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [timetables, setTimetables] = useState<Timetable[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedView, setSelectedView] = useState<'teacher' | 'student'>('student');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [bulkUploadData, setBulkUploadData] = useState('');
   const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null);
-  const [editingSlot, setEditingSlot] = useState<{ classId: string; day: string; period: number } | null>(null);
+  const [editingSlot, setEditingSlot] = useState<{ class_id: string; day: string; period: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const addSubject = (subject: Omit<Subject, 'id' | 'color'>) => {
-    const newSubject: Subject = {
-      ...subject,
-      id: `subject_${subjects.length + 1}`,
-      color: generateRandomColor(),
-    };
-    setSubjects([...subjects, newSubject]);
+  useEffect(() => {
+    loadInitialData();
+  }, [session?.user?.id]);
+
+  const loadInitialData = async () => {
+    if (!session?.user?.id) return;
+    
+    setLoading(true);
+    try {
+      const [loadedSubjects, loadedTeachers, loadedClasses, loadedTimetables] = await Promise.all([
+        dataService.getSubjects(),
+        dataService.getTeachers(),
+        dataService.getClasses(),
+        dataService.getTimetables()
+      ]);
+      
+      setSubjects(loadedSubjects);
+      setTeachers(loadedTeachers);
+      setClasses(loadedClasses);
+      setTimetables(loadedTimetables);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const addSubject = async (subject: Omit<Subject, 'id' | 'color'>) => {
+    try {
+      const newSubject = {
+        ...subject,
+        teacher_id: subject.teacher_id, // Use snake_case to match database
+        color: generateRandomColor(),
+        user_id: session?.user?.id
+      };
+      
+      const createdSubject = await dataService.createSubject(newSubject);
+      setSubjects(prev => [...prev, createdSubject]);
+      
+      toast({
+        title: "Success",
+        description: "Subject added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding subject:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add subject",
+        variant: "destructive"
+      });
+    }
   };
 
-  const addTeacher = (teacher: Omit<Teacher, 'id'>) => {
-    const newTeacher: Teacher = {
-      ...teacher,
-      id: `teacher_${teachers.length + 1}`,
-    };
-    setTeachers([...teachers, newTeacher]);
+  const addTeacher = async (teacher: Omit<Teacher, 'id'>) => {
+    try {
+      const newTeacher = {
+        ...teacher,
+        user_id: session?.user?.id
+      };
+      
+      const createdTeacher = await dataService.createTeacher(newTeacher);
+      setTeachers(prev => [...prev, createdTeacher]);
+      
+      toast({
+        title: "Success",
+        description: "Teacher added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add teacher",
+        variant: "destructive"
+      });
+    }
   };
 
-  const addClass = (classData: Omit<Class, 'id'>) => {
-    const newClass: Class = {
-      ...classData,
-      id: `class_${classes.length + 1}`,
-    };
-    setClasses([...classes, newClass]);
+  const addClass = async (classData: Omit<Class, 'id'>) => {
+    try {
+      const newClass = {
+        ...classData,
+        user_id: session?.user?.id
+      };
+      
+      const createdClass = await dataService.createClass(newClass);
+      setClasses(prev => [...prev, createdClass]);
+      
+      toast({
+        title: "Success",
+        description: "Class added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding class:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add class",
+        variant: "destructive"
+      });
+    }
   };
 
-  const generateTimetablesHandler = () => {
-    const generatedTimetables = generateTimetables(classes, teachers, subjects);
-    // Adjust the generated timetables to include interval slots
-    const adjustedTimetables = generatedTimetables.map(timetable => ({
-      ...timetable,
-      slots: DAYS.flatMap(day =>
-        Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
-          if (period === 2 || period === 4) {
-            return { day, period, subjectId: null, isLab: false, isInterval: true };
-          }
-          const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
-          const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
-          return slot ? { ...slot, period } : { day, period, subjectId: null, isLab: false, isInterval: false };
-        })
-      ),
-    }));
-    setTimetables(adjustedTimetables);
+  const generateTimetablesHandler = async () => {
+    try {
+      setLoading(true);
+      const generatedTimetables = generateTimetables(classes, teachers, subjects);
+      
+      // Adjust the generated timetables to match database schema
+      const adjustedTimetables = generatedTimetables.map(timetable => ({
+        class_id: timetable.class_id, // Convert to snake_case
+        user_id: session?.user?.id,
+        slots: DAYS.flatMap(day =>
+          Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+            if (period === 2 || period === 4) {
+              return {
+                day,
+                period,
+                subject_id: null, // Convert to snake_case
+                is_lab: false, // Convert to snake_case
+                is_interval: true // Convert to snake_case
+              };
+            }
+            const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+            const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
+            return slot
+              ? {
+                  day,
+                  period,
+                  subject_id: slot.subject_id, // Convert to snake_case
+                  is_lab: slot.is_lab, // Convert to snake_case
+                  is_interval: false // Convert to snake_case
+                }
+              : {
+                  day,
+                  period,
+                  subject_id: null,
+                  is_lab: false,
+                  is_interval: false
+                };
+          })
+        ),
+      }));
+  
+      // Save the generated timetables to the database
+      const savedTimetables = await Promise.all(
+        adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
+      );
+  
+      // Convert back to camelCase for frontend use
+      interface AdjustedTimetable {
+        class_id: string;
+        user_id: string;
+        slots: {
+          day: string;
+          period: number;
+          subject_id: string | null;
+          is_lab: boolean;
+          is_interval: boolean;
+        }[];
+      }
+
+      interface FormattedTimetable extends Timetable {
+        class_id: string;
+        slots: {
+          day: string;
+          period: number;
+          subject_id: string | null;
+          is_lab: boolean;
+          is_interval: boolean;
+        }[];
+      }
+
+      const formattedTimetables: FormattedTimetable[] = savedTimetables.map((timetable: AdjustedTimetable) => ({
+        ...timetable,
+        class_id: timetable.class_id,
+        slots: timetable.slots.map(slot => ({
+          ...slot,
+          subject_id: slot.subject_id,
+          isLab: slot.is_lab,
+          isInterval: slot.is_interval
+        }))
+      }));
+  
+      setTimetables(formattedTimetables);
+      toast({
+        title: "Success",
+        description: "Timetables generated and saved successfully",
+      });
+    } catch (error) {
+      console.error('Error generating timetables:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate timetables",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBulkUpload = () => {
@@ -119,12 +282,12 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
       ],
       timetables: [
         {
-          classId: 'class_1',
+          class_id: 'class_1',
           slots: DAYS.flatMap(day =>
             Array.from({ length: PERIODS_PER_DAY }, (_, period) => ({
               day,
               period,
-              subjectId: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
+              subject_id: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
               isLab: false,
             }))
           ),
@@ -139,18 +302,18 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   };
 
   const saveEditedTimetable = (editedTimetable: Timetable) => {
-    setTimetables(timetables.map(t => t.classId === editedTimetable.classId ? editedTimetable : t));
+    setTimetables(timetables.map(t => t.class_id === editedTimetable.class_id ? editedTimetable : t));
     setEditingTimetable(null);
   };
 
-  const removeSlot = (classId: string, day: string, period: number) => {
+  const removeSlot = (class_id: string, day: string, period: number) => {
     setTimetables(timetables.map(timetable => {
-      if (timetable.classId === classId) {
+      if (timetable.class_id === class_id) {
         return {
           ...timetable,
           slots: timetable.slots.map(slot => {
             if (slot.day === day && slot.period === period) {
-              return { ...slot, subjectId: null, isLab: false };
+              return { ...slot, subject_id: null, isLab: false };
             }
             return slot;
           })
@@ -160,19 +323,19 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
     }));
   };
 
-  const editSlot = (classId: string, day: string, period: number) => {
-    setEditingSlot({ classId, day, period });
+  const editSlot = (class_id: string, day: string, period: number) => {
+    setEditingSlot({ class_id, day, period });
   };
 
-  const saveEditedSlot = (subjectId: string) => {
+  const saveEditedSlot = (subject_id: string) => {
     if (editingSlot) {
       setTimetables(timetables.map(timetable => {
-        if (timetable.classId === editingSlot.classId) {
+        if (timetable.class_id === editingSlot.class_id) {
           return {
             ...timetable,
             slots: timetable.slots.map(slot => {
               if (slot.day === editingSlot.day && slot.period === editingSlot.period) {
-                return { ...slot, subjectId, isLab: false };
+                return { ...slot, subject_id, isLab: false };
               }
               return slot;
             })
@@ -305,18 +468,18 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
       {timetables.length > 0 && (
         <div className="mb-4">
           <TimetableView
-            timetables={selectedView === 'student' && selectedClass ? [timetables.find((t) => t.classId === selectedClass)!] : timetables}
+            timetables={selectedView === 'student' && selectedClass ? [timetables.find((t) => t.class_id === selectedClass)!] : timetables}
             subjects={subjects}
             teachers={teachers}
             classes={classes}
             view={selectedView}
             onRemoveSlot={removeSlot}
             onEditSlot={editSlot}
-            onRemoveTimetable={(classId) => setTimetables(timetables.filter(t => t.classId !== classId))}
+            onRemoveTimetable={(class_id) => setTimetables(timetables.filter(t => t.class_id !== class_id))}
           />
           {selectedView === 'student' && selectedClass && (
             <div className="left-4 mt-4">
-              <Button onClick={() => startEditingTimetable(timetables.find((t) => t.classId === selectedClass)!)} className="mr-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+              <Button onClick={() => startEditingTimetable(timetables.find((t) => t.class_id === selectedClass)!)} className="mr-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
                 Edit Timetable
               </Button>
             </div>
@@ -327,8 +490,14 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
         <TimetableEditForm
           timetable={editingTimetable}
           subjects={subjects}
+          teachers={teachers}
+          classes={classes}
           onSave={saveEditedTimetable}
           onCancel={() => setEditingTimetable(null)}
+          onDelete={(timetableId) => {
+            setTimetables(timetables.filter(t => t.id !== timetableId));
+            setEditingTimetable(null);
+          }}
         />
       )}
       {editingSlot && (
@@ -351,6 +520,7 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
           </div>
         </div>
       )}
+      <Toaster />
     </div>
   );
 }
