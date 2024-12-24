@@ -119,7 +119,9 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
     try {
       const newClass = {
         ...classData,
-        user_id: session?.user?.id
+        user_id: session?.user?.id,
+        labs: classData.labs || [], // Ensure labs is initialized
+        subjects: classData.subjects || [], // Ensure subjects is initialized
       };
       
       const createdClass = await dataService.createClass(newClass);
@@ -140,102 +142,127 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   };
 
   const generateTimetablesHandler = async () => {
-    try {
-      setLoading(true);
-      const generatedTimetables = generateTimetables(classes, teachers, subjects);
+  try {
+    setLoading(true);
+    
+    // Validate required data exists
+    if (!classes || classes.length === 0) {
+      throw new Error("No classes found. Please add at least one class before generating timetables.");
+    }
+    
+    if (!teachers || teachers.length === 0) {
+      throw new Error("No teachers found. Please add at least one teacher before generating timetables.");
+    }
+    
+    if (!subjects || subjects.length === 0) {
+      throw new Error("No subjects found. Please add at least one subject before generating timetables.");
+    }
+
+    // Validate relationships between data
+    for (const cls of classes) {
+      if (!cls.subjects || cls.subjects.length === 0) {
+        throw new Error(`Class ${cls.name} has no subjects assigned.`);
+      }
       
-      // Adjust the generated timetables to match database schema
-      const adjustedTimetables = generatedTimetables.map(timetable => ({
-        class_id: timetable.class_id, // Convert to snake_case
-        user_id: session?.user?.id,
-        slots: DAYS.flatMap(day =>
-          Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
-            if (period === 2 || period === 4) {
-              return {
+      // Verify all subjects in class exist
+      cls.subjects.forEach(subjectId => {
+        if (!subjects.find(s => s.id === subjectId)) {
+          throw new Error(`Invalid subject reference in class ${cls.name}`);
+        }
+      });
+    }
+
+    // Verify each subject has a teacher
+    subjects.forEach(subject => {
+      if (!subject.teacher_id || !teachers.find(t => t.id === subject.teacher_id)) {
+        throw new Error(`Subject ${subject.name} has no valid teacher assigned.`);
+      }
+    });
+
+    // Generate timetables with validated data
+    const generatedTimetables = generateTimetables(classes, teachers, subjects);
+    
+    // Validate generated timetables
+    if (!generatedTimetables || !Array.isArray(generatedTimetables)) {
+      throw new Error("Failed to generate valid timetables structure");
+    }
+
+    // Validate each generated timetable
+    generatedTimetables.forEach((timetable, index) => {
+      if (!timetable || !timetable.class_id || !timetable.slots) {
+        throw new Error(`Invalid timetable generated at index ${index}`);
+      }
+    });
+
+    // Adjust the generated timetables to match database schema
+    const adjustedTimetables = generatedTimetables.map(timetable => ({
+      class_id: timetable.class_id,
+      user_id: session?.user?.id,
+      slots: DAYS.flatMap(day =>
+        Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+          if (period === 2 || period === 4) {
+            return {
+              day,
+              period,
+              subject_id: null,
+              is_lab: false,
+              is_interval: true
+            };
+          }
+          const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+          const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
+          return slot
+            ? {
                 day,
                 period,
-                subject_id: null, // Convert to snake_case
-                is_lab: false, // Convert to snake_case
-                is_interval: true // Convert to snake_case
+                subject_id: slot.subject_id,
+                is_lab: slot.is_lab,
+                is_interval: false
+              }
+            : {
+                day,
+                period,
+                subject_id: null,
+                is_lab: false,
+                is_interval: false
               };
-            }
-            const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
-            const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
-            return slot
-              ? {
-                  day,
-                  period,
-                  subject_id: slot.subject_id, // Convert to snake_case
-                  is_lab: slot.is_lab, // Convert to snake_case
-                  is_interval: false // Convert to snake_case
-                }
-              : {
-                  day,
-                  period,
-                  subject_id: null,
-                  is_lab: false,
-                  is_interval: false
-                };
-          })
-        ),
-      }));
-  
-      // Save the generated timetables to the database
-      const savedTimetables = await Promise.all(
-        adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
-      );
-  
-      // Convert back to camelCase for frontend use
-      interface AdjustedTimetable {
-        class_id: string;
-        user_id: string;
-        slots: {
-          day: string;
-          period: number;
-          subject_id: string | null;
-          is_lab: boolean;
-          is_interval: boolean;
-        }[];
-      }
+        })
+      ),
+    }));
 
-      interface FormattedTimetable extends Timetable {
-        class_id: string;
-        slots: {
-          day: string;
-          period: number;
-          subject_id: string | null;
-          is_lab: boolean;
-          is_interval: boolean;
-        }[];
-      }
+    // Save the generated timetables to the database
+    const savedTimetables = await Promise.all(
+      adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
+    );
 
-      const formattedTimetables: FormattedTimetable[] = savedTimetables.map((timetable: AdjustedTimetable) => ({
-        ...timetable,
-        class_id: timetable.class_id,
-        slots: timetable.slots.map(slot => ({
-          ...slot,
-          subject_id: slot.subject_id,
-          isLab: slot.is_lab,
-          isInterval: slot.is_interval
-        }))
-      }));
-  
-      setTimetables(formattedTimetables);
-      toast({
-        title: "Success",
-        description: "Timetables generated and saved successfully",
-      });
-    } catch (error) {
-      console.error('Error generating timetables:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate timetables",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Format timetables for frontend
+    const formattedTimetables = savedTimetables.map(timetable => ({
+      ...timetable,
+      slots: timetable.slots.map(slot => ({
+        ...slot,
+        isLab: slot.is_lab,
+        isInterval: slot.is_interval
+      }))
+    }));
+
+    setTimetables(formattedTimetables);
+    
+    toast({
+      title: "Success",
+      description: "Timetables generated and saved successfully",
+    });
+
+  } catch (error) {
+    console.error('Error generating timetables:', error);
+    toast({
+      title: "Error",
+      description: error instanceof Error ? error.message : "Failed to generate timetables",
+      variant: "destructive"
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleBulkUpload = () => {
     try {
@@ -270,31 +297,99 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   const getSampleData = () => {
     const sampleData = {
       subjects: [
-        { id: 'subject_1', name: 'Mathematics', color: '#FF5733', teacherId: 'teacher_1', constraints: { 'Monday': { start: 1, end: 4 } } },
-        { id: 'subject_2', name: 'Physics', color: '#33FF57', teacherId: 'teacher_2', constraints: { 'Tuesday': { start: 5, end: 8 } } },
+        { 
+          id: 'subject_1', 
+          name: 'Mathematics', 
+          color: '#FF5733', 
+          teacher_id: 'teacher_1',
+          user_id: 'current_user_id', // Required by database
+          constraints: { 
+            'Monday': { start: 1, end: 4 } 
+          },
+          created_at: new Date().toISOString()
+        },
+        { 
+          id: 'subject_2', 
+          name: 'Physics', 
+          color: '#33FF57', 
+          teacher_id: 'teacher_2',
+          user_id: 'current_user_id', // Required by database
+          constraints: { 
+            'Tuesday': { start: 5, end: 8 } 
+          },
+          created_at: new Date().toISOString()
+        },
       ],
       teachers: [
-        { id: 'teacher_1', name: 'John Doe', constraints: { 'Monday': { start: 1, end: 6 } } },
-        { id: 'teacher_2', name: 'Jane Smith', constraints: { 'Tuesday': { start: 3, end: 8 } } },
+        { 
+          id: 'teacher_1', 
+          name: 'John Doe',
+          user_id: 'current_user_id', // Required by database
+          constraints: { 
+            'Monday': { start: 1, end: 6 } 
+          },
+          created_at: new Date().toISOString()
+        },
+        { 
+          id: 'teacher_2', 
+          name: 'Jane Smith',
+          user_id: 'current_user_id', // Required by database
+          constraints: { 
+            'Tuesday': { start: 3, end: 8 } 
+          },
+          created_at: new Date().toISOString()
+        },
       ],
       classes: [
-        { id: 'class_1', name: 'Class 10A', subjects: ['subject_1', 'subject_2'], labs: [] },
+        { 
+          id: 'class_1', 
+          name: 'Class 10A',
+          user_id: 'current_user_id', // Required by database
+          subjects: ['subject_1', 'subject_2'],
+          labs: [], // Should be JSONB in database
+          created_at: new Date().toISOString()
+        },
       ],
       timetables: [
         {
+          id: 'timetable_1',
           class_id: 'class_1',
+          user_id: 'current_user_id', // Required by database
           slots: DAYS.flatMap(day =>
-            Array.from({ length: PERIODS_PER_DAY }, (_, period) => ({
-              day,
-              period,
-              subject_id: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
-              isLab: false,
-            }))
+            Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+              // Add intervals at period 2 and 4
+              if (period === 2 || period === 4) {
+                return {
+                  day,
+                  period,
+                  subject_id: null,
+                  is_lab: false,
+                  is_interval: true
+                };
+              }
+              // Adjust period numbers for normal slots
+              const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+              return {
+                day,
+                period: adjustedPeriod,
+                subject_id: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
+                is_lab: false,
+                is_interval: false
+              };
+            })
           ),
+          created_at: new Date().toISOString()
         },
       ],
     };
-    setBulkUploadData(JSON.stringify(sampleData, null, 2));
+  
+    // Replace 'current_user_id' with actual session user ID
+    const userJson = JSON.stringify(sampleData, null, 2).replace(
+      /current_user_id/g, 
+      session?.user?.id || ''
+    );
+    
+    setBulkUploadData(userJson);
   };
 
   const startEditingTimetable = (timetable: Timetable) => {

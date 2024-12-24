@@ -101,13 +101,28 @@ export const dataService = {
   },
 
   async createClass(classData: Omit<Class, 'id'>) {
+    console.log('Creating class with data:', classData); // Debug log
+    
+    if (!classData.name || !classData.subjects) {
+      throw new Error('Missing required class data');
+    }
+
     const { data, error } = await supabase
       .from('classes')
-      .insert([{ ...classData }])
+      .insert([{
+        name: classData.name,
+        subjects: classData.subjects,
+        labs: classData.labs || [],
+        user_id: classData.user_id
+      }])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error); // Debug log
+      throw error;
+    }
+    
     return data;
   },
 

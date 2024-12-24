@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,14 +30,23 @@ export default function TimetableEditForm({
 }: TimetableEditFormProps) {
   const [editedTimetable, setEditedTimetable] = useState<Timetable>(timetable);
 
-  const handleSlotChange = (day: string, period: number, subjectId: string | null, isLab: boolean) => {
+  // Initialize with existing timetable data
+  useEffect(() => {
+    setEditedTimetable(timetable);
+  }, [timetable]);
+
+  const handleSlotChange = (day: string, period: number, subject_id: string | null, is_lab: boolean) => {
     const updatedSlots = editedTimetable.slots.map(slot => {
       if (slot.day === day && slot.period === period) {
-        return { ...slot, subjectId, isLab };
+        return { ...slot, subject_id, is_lab };
       }
       return slot;
     });
     setEditedTimetable({ ...editedTimetable, slots: updatedSlots });
+  };
+
+  const getSlot = (day: string, period: number) => {
+    return editedTimetable.slots.find(slot => slot.day === day && slot.period === period);
   };
 
   const removeSlot = (day: string, period: number) => {
@@ -87,9 +96,9 @@ export default function TimetableEditForm({
 
   return (
     <Card className="w-full bg-white shadow-lg rounded-lg overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex justify-between items-center">
-        <CardTitle className="text-2xl font-bold">Edit Timetable</CardTitle>
-        <div className="flex gap-2">
+      <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 flex flex-row justify-between ">
+        <CardTitle className="text-2xl items-center font-bold">Edit Timetable - {classes.find(c => c.id === editedTimetable.class_id)?.name}</CardTitle>
+        <div className="flex justify-end">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="flex items-center gap-2">
@@ -130,20 +139,20 @@ export default function TimetableEditForm({
                 <TableRow key={day} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="font-medium text-gray-700">{day}</TableCell>
                   {Array.from({ length: PERIODS_PER_DAY }, (_, period) => {
-                    if (isInterval(period)) {
+                    const slot = getSlot(day, period);
+                    if (slot?.is_interval) {
                       return (
                         <TableCell key={period} className="bg-gray-100 text-center text-sm text-gray-500">
                           Break Time
                         </TableCell>
                       );
                     }
-                    const slot = editedTimetable.slots.find((s) => s.day === day && s.period === period);
                     return (
                       <TableCell key={period} className="p-2">
                         <div className="space-y-2">
                           <Select
-                            value={slot?.subjectId || "none"}
-                            onValueChange={(value) => handleSlotChange(day, period, value === "none" ? null : value, slot?.isLab || false)}
+                            value={slot?.subject_id || "none"}
+                            onValueChange={(value) => handleSlotChange(day, period, value === "none" ? null : value, slot?.is_lab || false)}
                           >
                             <SelectTrigger className="w-full bg-white border border-gray-200 hover:border-blue-500 transition-colors">
                               <SelectValue placeholder="Select subject" />
@@ -159,15 +168,15 @@ export default function TimetableEditForm({
                           </Select>
                           <div className="flex gap-2">
                             <Button
-                              onClick={() => handleSlotChange(day, period, slot?.subjectId || null, !slot?.isLab)}
+                              onClick={() => handleSlotChange(day, period, slot?.subject_id || null, !slot?.is_lab)}
                               variant="outline"
                               size="sm"
                               className={`flex items-center gap-1 ${
-                                slot?.isLab ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-700'
+                                slot?.is_lab ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-700'
                               }`}
                             >
                               <BeakerIcon size={14} />
-                              {slot?.isLab ? 'Lab' : 'Set Lab'}
+                              {slot?.is_lab ? 'Lab' : 'Set Lab'}
                             </Button>
                             <Button
                               onClick={() => removeSlot(day, period)}
@@ -186,7 +195,7 @@ export default function TimetableEditForm({
                 </TableRow>
               ))}
             </TableBody>
-            </Table>
+          </Table>        
         </div>
         <div className="mt-6 flex gap-4">
           <Button
