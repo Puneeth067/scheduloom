@@ -142,127 +142,139 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   };
 
   const generateTimetablesHandler = async () => {
-  try {
-    setLoading(true);
-    
-    // Validate required data exists
-    if (!classes || classes.length === 0) {
-      throw new Error("No classes found. Please add at least one class before generating timetables.");
-    }
-    
-    if (!teachers || teachers.length === 0) {
-      throw new Error("No teachers found. Please add at least one teacher before generating timetables.");
-    }
-    
-    if (!subjects || subjects.length === 0) {
-      throw new Error("No subjects found. Please add at least one subject before generating timetables.");
-    }
-
-    // Validate relationships between data
-    for (const cls of classes) {
-      if (!cls.subjects || cls.subjects.length === 0) {
-        throw new Error(`Class ${cls.name} has no subjects assigned.`);
+    try {
+      setLoading(true);
+      
+      // Validate required data exists
+      if (!classes || classes.length === 0) {
+        throw new Error("No classes found. Please add at least one class before generating timetables.");
       }
       
-      // Verify all subjects in class exist
-      cls.subjects.forEach(subjectId => {
-        if (!subjects.find(s => s.id === subjectId)) {
-          throw new Error(`Invalid subject reference in class ${cls.name}`);
+      if (!teachers || teachers.length === 0) {
+        throw new Error("No teachers found. Please add at least one teacher before generating timetables.");
+      }
+      
+      if (!subjects || subjects.length === 0) {
+        throw new Error("No subjects found. Please add at least one subject before generating timetables.");
+      }
+  
+      // Get existing timetables for validation
+      const existingTimetables = await dataService.getTimetables();
+      const classesWithTimetables = new Set(existingTimetables.map(t => t.class_id));
+  
+      // Filter out classes that already have timetables
+      const classesNeedingTimetables = classes.filter(cls => !classesWithTimetables.has(cls.id));
+  
+      if (classesNeedingTimetables.length === 0) {
+        throw new Error("All classes already have timetables. Delete existing timetables first if you want to regenerate them.");
+      }
+  
+      // Validate relationships between data
+      for (const cls of classesNeedingTimetables) {
+        if (!cls.subjects || cls.subjects.length === 0) {
+          throw new Error(`Class ${cls.name} has no subjects assigned.`);
+        }
+        
+        // Verify all subjects in class exist
+        cls.subjects.forEach(subjectId => {
+          if (!subjects.find(s => s.id === subjectId)) {
+            throw new Error(`Invalid subject reference in class ${cls.name}`);
+          }
+        });
+      }
+  
+      // Verify each subject has a teacher
+      subjects.forEach(subject => {
+        if (!subject.teacher_id || !teachers.find(t => t.id === subject.teacher_id)) {
+          throw new Error(`Subject ${subject.name} has no valid teacher assigned.`);
         }
       });
-    }
-
-    // Verify each subject has a teacher
-    subjects.forEach(subject => {
-      if (!subject.teacher_id || !teachers.find(t => t.id === subject.teacher_id)) {
-        throw new Error(`Subject ${subject.name} has no valid teacher assigned.`);
+  
+      // Generate timetables only for classes that don't have one
+      const generatedTimetables = generateTimetables(classesNeedingTimetables, teachers, subjects);
+      
+      // Validate generated timetables
+      if (!generatedTimetables || !Array.isArray(generatedTimetables)) {
+        throw new Error("Failed to generate valid timetables structure");
       }
-    });
-
-    // Generate timetables with validated data
-    const generatedTimetables = generateTimetables(classes, teachers, subjects);
-    
-    // Validate generated timetables
-    if (!generatedTimetables || !Array.isArray(generatedTimetables)) {
-      throw new Error("Failed to generate valid timetables structure");
-    }
-
-    // Validate each generated timetable
-    generatedTimetables.forEach((timetable, index) => {
-      if (!timetable || !timetable.class_id || !timetable.slots) {
-        throw new Error(`Invalid timetable generated at index ${index}`);
-      }
-    });
-
-    // Adjust the generated timetables to match database schema
-    const adjustedTimetables = generatedTimetables.map(timetable => ({
-      class_id: timetable.class_id,
-      user_id: session?.user?.id,
-      slots: DAYS.flatMap(day =>
-        Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
-          if (period === 2 || period === 4) {
-            return {
-              day,
-              period,
-              subject_id: null,
-              is_lab: false,
-              is_interval: true
-            };
-          }
-          const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
-          const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
-          return slot
-            ? {
-                day,
-                period,
-                subject_id: slot.subject_id,
-                is_lab: slot.is_lab,
-                is_interval: false
-              }
-            : {
+  
+      // Validate each generated timetable
+      generatedTimetables.forEach((timetable, index) => {
+        if (!timetable || !timetable.class_id || !timetable.slots) {
+          throw new Error(`Invalid timetable generated at index ${index}`);
+        }
+      });
+  
+      // Adjust the generated timetables to match database schema
+      const adjustedTimetables = generatedTimetables.map(timetable => ({
+        class_id: timetable.class_id,
+        user_id: session?.user?.id,
+        slots: DAYS.flatMap(day =>
+          Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+            if (period === 2 || period === 4) {
+              return {
                 day,
                 period,
                 subject_id: null,
                 is_lab: false,
-                is_interval: false
+                is_interval: true
               };
-        })
-      ),
-    }));
-
-    // Save the generated timetables to the database
-    const savedTimetables = await Promise.all(
-      adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
-    );
-
-    // Format timetables for frontend
-    const formattedTimetables = savedTimetables.map(timetable => ({
-      ...timetable,
-      slots: timetable.slots.map(slot => ({
-        ...slot,
-        isLab: slot.is_lab,
-        isInterval: slot.is_interval
-      }))
-    }));
-
-    setTimetables(formattedTimetables);
-    
-    toast({
-      title: "Success",
-      description: "Timetables generated and saved successfully",
-    });
-
-  } catch (error) {
-    console.error('Error generating timetables:', error);
-    toast({
-      title: "Error",
-      description: error instanceof Error ? error.message : "Failed to generate timetables",
-      variant: "destructive"
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+            }
+            const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+            const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
+            return slot
+              ? {
+                  day,
+                  period,
+                  subject_id: slot.subject_id,
+                  is_lab: slot.is_lab,
+                  is_interval: false
+                }
+              : {
+                  day,
+                  period,
+                  subject_id: null,
+                  is_lab: false,
+                  is_interval: false
+                };
+          })
+        ),
+      }));
+  
+      // Save the generated timetables to the database
+      const savedTimetables = await Promise.all(
+        adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
+      );
+  
+      // Format timetables for frontend
+      const formattedTimetables = savedTimetables.map(timetable => ({
+        ...timetable,
+        slots: timetable.slots.map(slot => ({
+          ...slot,
+          isLab: slot.is_lab,
+          isInterval: slot.is_interval
+        }))
+      }));
+  
+      // Merge with existing timetables for display
+      setTimetables(prevTimetables => [...prevTimetables, ...formattedTimetables]);
+      
+      toast({
+        title: "Success",
+        description: `Generated timetables for ${formattedTimetables.length} classes successfully`,
+      });
+  
+    } catch (error) {
+      console.error('Error generating timetables:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate timetables",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBulkUpload = () => {
     try {
