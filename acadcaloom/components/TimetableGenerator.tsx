@@ -1,7 +1,10 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabaseClient';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Subject, Teacher, Class, Timetable, Room, DAYS, PERIODS_PER_DAY } from '../types';
@@ -14,7 +17,7 @@ import ClassForm from './ClassForm';
 import RoomForm from './RoomForm';
 import TimetableView from './TimetableView';
 import TimetableEditForm from './TimetableEditForm';
-import { Calendar, User, Users, Download } from 'lucide-react';
+import { Calendar, User, Users, Download, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { dataService } from '@/services/dataService';
 import { toast } from '@/hooks/use-toast';
@@ -37,6 +40,32 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
   const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null);
   const [editingSlot, setEditingSlot] = useState<{ class_id: string; day: string; period: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear user data
+      if (setUserData) {
+        setUserData(null);
+      }
+      
+      router.push('/');
+    } catch (error: any) {
+      console.error('Logout error:', error.message);
+      toast({
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     loadInitialData();
@@ -536,6 +565,43 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+      <header className="p-6 backdrop-blur-sm bg-white/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center space-x-2"
+          >
+            <Calendar className="w-8 h-8 text-purple-600" />
+            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-emerald-600 bg-clip-text text-transparent">
+              AcademicCal Pro
+            </span>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center space-x-4"
+          >
+            <Button 
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-200"
+              variant="outline"
+            >
+              {isLoggingOut ? (
+                <span className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Logging out...</span>
+                </span>
+              ) : (
+                'Logout'
+              )}
+            </Button>
+          </motion.div>
+        </div>
+      </header>
       <div className="container mx-auto px-4 max-w-7xl">
         <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center bg-gradient-to-r from-purple-600 via-blue-600 to-emerald-600 bg-clip-text text-transparent">
           College Timetable Generator

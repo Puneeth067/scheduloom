@@ -27,7 +27,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -169,21 +168,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setSession(null);
-      setUserData(null);
-      router.push('/');
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
@@ -297,15 +281,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
       <div className="absolute inset-0 bg-grid-slate-900/[0.04] -z-10" />
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-end p-6">
-          <Button 
-            variant="outline" 
-            onClick={handleLogout}
-            className="bg-white/50 hover:bg-white/80 border-gray-200"
-          >
-            Logout
-          </Button>
-        </div>
         <div className="p-6">
           {React.cloneElement(children as React.ReactElement, { session, userData, setUserData })}
         </div>
