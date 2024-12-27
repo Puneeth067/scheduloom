@@ -36,11 +36,20 @@ export default function TimetableEditForm({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
 
   useEffect(() => {
-    setEditedTimetable(timetable);
+    // Ensure we're working with the correct is_lab property format
+    const normalizedSlots = timetable.slots.map(slot => ({
+      ...slot,
+      is_lab: Boolean(slot.is_lab), // Ensure boolean type
+    }));
+
+    setEditedTimetable({
+      ...timetable,
+      slots: normalizedSlots
+    });
+
     const classData = classes.find(c => c.id === timetable.class_id);
     setCurrentClass(classData || null);
 
-    // Filter available rooms
     const otherClassRooms = classes
       .filter(c => c.id !== timetable.class_id)
       .map(c => c.room_id);
@@ -55,7 +64,11 @@ export default function TimetableEditForm({
   const handleSlotChange = (day: string, period: number, subject_id: string | null, is_lab: boolean) => {
     const updatedSlots = editedTimetable.slots.map(slot => {
       if (slot.day === day && slot.period === period) {
-        return { ...slot, subject_id, is_lab };
+        return { 
+          ...slot, 
+          subject_id, 
+          is_lab // Ensure is_lab is included in the update
+        };
       }
       return slot;
     });
@@ -103,15 +116,27 @@ export default function TimetableEditForm({
   const handleSave = async () => {
     try {
       if (editedTimetable.id) {
-        await dataService.updateTimetable(editedTimetable.id, editedTimetable);
+        // Ensure all slots have the correct is_lab property before saving
+        const normalizedSlots = editedTimetable.slots.map(slot => ({
+          ...slot,
+          is_lab: Boolean(slot.is_lab),
+          is_interval: Boolean(slot.is_interval)
+        }));
+
+        const updatedTimetable = {
+          ...editedTimetable,
+          slots: normalizedSlots
+        };
+
+        await dataService.updateTimetable(editedTimetable.id, updatedTimetable);
+        onSave(updatedTimetable);
+        toast({
+          title: "Success",
+          description: "Timetable updated successfully",
+        });
       } else {
         throw new Error('Timetable ID is undefined');
       }
-      onSave(editedTimetable);
-      toast({
-        title: "Success",
-        description: "Timetable updated successfully",
-      });
     } catch (error) {
       console.error('Error saving timetable:', error);
       toast({

@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Timetable, Subject, Teacher, Class, Room, DAYS, PERIODS_PER_DAY } from '../types';
-import { BeakerIcon, Building, GraduationCap, ArrowUp, ArrowDown, Users } from 'lucide-react';
+import { BeakerIcon, Building, GraduationCap, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface TimetableViewProps {
@@ -53,8 +53,9 @@ export default function TimetableView({
     return teacher ? teacher.name : '';
   };
 
+  // Update getTeacherSchedule to include lab information
   const getTeacherSchedule = (teacher_id: string) => {
-    const schedule: { [key: string]: { className: string; subjectName: string; roomInfo: any }[] } = {};
+    const schedule: { [key: string]: { className: string; subjectName: string; roomInfo: any; is_lab: boolean }[] } = {};
     
     DAYS.forEach(day => {
       schedule[day] = Array(PERIODS_PER_DAY).fill(null);
@@ -71,7 +72,8 @@ export default function TimetableView({
             schedule[slot.day][slot.period] = {
               className: classData.name,
               subjectName: subject.name,
-              roomInfo: getRoomInfo(classData.room_id)
+              roomInfo: getRoomInfo(classData.room_id),
+              is_lab: slot.is_lab
             };
           }
         }
@@ -122,8 +124,12 @@ export default function TimetableView({
         {slot && !slot.is_interval && (
           <>
             <div className="space-y-1">
-              <div className="font-medium text-gray-700">
+              <div className="font-medium text-gray-700 flex items-center gap-2">
                 {getSubjectName(slot.subject_id)}
+                {/* Add lab icon if is_lab is true */}
+                {slot.is_lab && (
+                  <BeakerIcon size={16} className="text-purple-600" />
+                )}
               </div>
               <div className="text-sm text-gray-500">
                 {teacherName}
@@ -139,6 +145,25 @@ export default function TimetableView({
       </div>
     );
   };
+
+  // For teacher view, update the slot rendering to show lab status
+  const renderTeacherSlot = (slot: any) => {
+    if (!slot) return null;
+    
+    return (
+      <div className="p-2 bg-indigo-50 rounded-lg space-y-2">
+        <div className="font-medium text-indigo-700 flex items-center gap-2">
+          {slot.className}
+          {slot.is_lab && (
+            <BeakerIcon size={16} className="text-purple-600" />
+          )}
+        </div>
+        <div className="text-sm text-indigo-600">{slot.subjectName}</div>
+        {slot.roomInfo && renderRoomBadge(slot.roomInfo)}
+      </div>
+    );
+  };
+
 
   if (view === 'teacher') {
     return (
@@ -182,13 +207,7 @@ export default function TimetableView({
                             }
                             return (
                               <TableCell key={period} className="text-center">
-                                {slot && (
-                                  <div className="p-2 bg-indigo-50 rounded-lg space-y-2">
-                                    <div className="font-medium text-indigo-700">{slot.className}</div>
-                                    <div className="text-sm text-indigo-600">{slot.subjectName}</div>
-                                    {slot.roomInfo && renderRoomBadge(slot.roomInfo)}
-                                  </div>
-                                )}
+                                {slot && renderTeacherSlot(slot)}
                               </TableCell>
                             );
                           })}
