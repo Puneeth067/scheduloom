@@ -14,11 +14,14 @@ import ClassForm from './ClassForm';
 import RoomForm from './RoomForm';
 import TimetableView from './TimetableView';
 import TimetableEditForm from './TimetableEditForm';
-import { Calendar, User, Users } from 'lucide-react';
+import { Calendar, User, Users, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { dataService } from '@/services/dataService';
 import { toast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import { saveAs } from 'file-saver';
+import { Packer } from 'docx';
+import { generateTimetableDocx } from '../utils/docxUtils';
 
 
 export default function TimetableGenerator({ session, userData, setUserData }: TimetableGeneratorProps) {
@@ -455,6 +458,36 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
     setEditingTimetable(timetable);
   };
 
+  const handleDownload = async (timetable: Timetable) => {
+    try {
+      const doc = generateTimetableDocx({
+        timetable,
+        subjects,
+        teachers,
+        classes,
+        rooms,
+      });
+      
+      const currentClass = classes.find(c => c.id === timetable.class_id);
+      const className = currentClass?.name || 'timetable';
+      
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `${className}_timetable.docx`);
+      
+      toast({
+        title: "Success",
+        description: "Timetable downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Error downloading timetable:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download timetable",
+        variant: "destructive"
+      });
+    }
+  };
+
   const saveEditedTimetable = (editedTimetable: Timetable) => {
     setTimetables(timetables.map(t => t.class_id === editedTimetable.class_id ? editedTimetable : t));
     setEditingTimetable(null);
@@ -642,9 +675,20 @@ export default function TimetableGenerator({ session, userData, setUserData }: T
             onRemoveTimetable={(class_id) => setTimetables(timetables.filter(t => t.class_id !== class_id))}
           />
           {selectedView === 'student' && selectedClass && (
-            <div className="left-4 mt-4">
-              <Button onClick={() => startEditingTimetable(timetables.find((t) => t.class_id === selectedClass)!)} className="mr-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+            <div className="left-4 mt-4 flex gap-2">
+              <Button 
+                onClick={() => startEditingTimetable(timetables.find((t) => t.class_id === selectedClass)!)} 
+                className="bg-gradient-to-r from-blue-600 to-blue-800 text-white"
+              >
                 Edit Timetable
+              </Button>
+              <Button
+                onClick={() => handleDownload(timetables.find((t) => t.class_id === selectedClass)!)}
+                variant="outline"
+                className="border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+              >
+                <Download size={16} />
+                Download Timetable
               </Button>
             </div>
           )}
