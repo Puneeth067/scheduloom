@@ -1,4 +1,4 @@
-import { Subject, Teacher, Class, Timetable, TimeSlot, DAYS, PERIODS_PER_DAY, Room } from '../types';
+import { Subject, Teacher, Class, Timetable, DAYS, PERIODS_PER_DAY, Room } from '../types';
 
 function generateInitialPopulation(
   classes: Class[], 

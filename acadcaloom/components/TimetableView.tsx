@@ -14,6 +14,7 @@ interface TimetableViewProps {
   view: 'student' | 'teacher';
 }
 
+
 interface RoomInfo {
   name: string;
   building: string;
