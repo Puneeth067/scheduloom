@@ -1,9 +1,8 @@
-// AuthWrapper.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/utils/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +17,13 @@ interface UserData {
   created_at: string;
 }
 
+interface AuthError extends Error {
+  message: string;
+  status?: number;
+}
+
 const AuthWrapper = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -28,19 +32,20 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
-        setSession(currentSession);
-        if (currentSession?.user) {
-          await getUserData(currentSession.user.id);
-        }
-        setIsLoading(false);
+  const checkUser = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      
+      if (session?.user) {
+        await getUserData(session.user.id);
       }
-    );
-
-    checkUser();
-    return () => subscription.unsubscribe();
+    } catch (error) {
+      const authError = error as AuthError;
+      console.error('Error checking user session:', authError.message);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   async function getUserData(userId: string) {
@@ -54,22 +59,8 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       if (data) setUserData(data);
     } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  }
-
-  async function checkUser() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      
-      if (session?.user) {
-        await getUserData(session.user.id);
-      }
-    } catch (error) {
-      console.error('Error checking user session:', error);
-    } finally {
-      setIsLoading(false);
+      const authError = error as AuthError;
+      console.error('Error fetching user data:', authError.message);
     }
   }
 
@@ -81,14 +72,11 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
         .eq('email', email)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error checking email:', error);
-        return false;
-      }
-
+      if (error) throw error;
       return !!data;
     } catch (error) {
-      console.error('Error checking email:', error);
+      const authError = error as AuthError;
+      console.error('Error checking email:', authError.message);
       return false;
     }
   };
@@ -109,8 +97,9 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
       if (data.user) {
         await getUserData(data.user.id);
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error) {
+      const authError = error as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +113,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
       setError(null);
       setSuccessMessage(null);
 
-      // First check if email exists
       const emailExists = await checkEmailExists(email);
       
       if (emailExists) {
@@ -132,7 +120,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Proceed with signup if email doesn't exist
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -141,7 +128,6 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Insert into users table
         const { error: insertError } = await supabase
           .from('users')
           .insert([
@@ -152,21 +138,35 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
             }
           ]);
 
-        if (insertError) {
-          console.error('Error inserting user data:', insertError);
-        }
+        if (insertError) throw insertError;
 
         setSuccessMessage('Please check your email to verify your account before logging in.');
         setEmail('');
         setPassword('');
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error) {
+      const authError = error as AuthError;
+      setError(authError.message);
     } finally {
       setIsLoading(false);
       setIsCheckingEmail(false);
     }
   };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, currentSession) => {
+        setSession(currentSession);
+        if (currentSession?.user) {
+          await getUserData(currentSession.user.id);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    checkUser();
+    return () => subscription.unsubscribe();
+  }, [checkUser]);
 
   if (isLoading) {
     return (

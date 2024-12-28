@@ -14,6 +14,25 @@ interface TimetableViewProps {
   view: 'student' | 'teacher';
 }
 
+interface RoomInfo {
+  name: string;
+  building: string;
+  floor: number;
+  type: string;
+  capacity: number;
+}
+
+interface TeacherScheduleSlot {
+  className: string;
+  subjectName: string;
+  roomInfo: RoomInfo | null;
+  is_lab: boolean;
+}
+
+type TeacherSchedule = {
+  [key: string]: TeacherScheduleSlot[]
+};
+
 export default function TimetableView({
   timetables,
   subjects,
@@ -33,7 +52,7 @@ export default function TimetableView({
     return classData ? classData.name : '';
   };
 
-  const getRoomInfo = (room_id: string | null) => {
+  const getRoomInfo = (room_id: string | null): RoomInfo | null => {
     if (!room_id) return null;
     const room = rooms.find((r) => r.id === room_id);
     return room ? {
@@ -53,9 +72,8 @@ export default function TimetableView({
     return teacher ? teacher.name : '';
   };
 
-  // Update getTeacherSchedule to include lab information
-  const getTeacherSchedule = (teacher_id: string) => {
-    const schedule: { [key: string]: { className: string; subjectName: string; roomInfo: any; is_lab: boolean }[] } = {};
+  const getTeacherSchedule = (teacher_id: string): TeacherSchedule => {
+    const schedule: TeacherSchedule = {};
     
     DAYS.forEach(day => {
       schedule[day] = Array(PERIODS_PER_DAY).fill(null);
@@ -94,7 +112,7 @@ export default function TimetableView({
     }
   };
 
-  const renderRoomBadge = (roomInfo: any) => {
+  const renderRoomBadge = (roomInfo: RoomInfo | null) => {
     if (!roomInfo) return null;
     
     return (
@@ -114,7 +132,6 @@ export default function TimetableView({
   const renderCell = (slot: any, timetable: Timetable) => {
     if (!slot || slot.is_interval) return null;
 
-    const subject = subjects.find(s => s.id === slot.subject_id);
     const classData = classes.find(c => c.id === timetable.class_id);
     const roomInfo = classData ? getRoomInfo(classData.room_id) : null;
     const teacherName = getTeacherName(slot.subject_id);
@@ -126,7 +143,6 @@ export default function TimetableView({
             <div className="space-y-1">
               <div className="font-medium text-gray-700 flex items-center gap-2">
                 {getSubjectName(slot.subject_id)}
-                {/* Add lab icon if is_lab is true */}
                 {slot.is_lab && (
                   <BeakerIcon size={16} className="text-purple-600" />
                 )}
@@ -146,8 +162,7 @@ export default function TimetableView({
     );
   };
 
-  // For teacher view, update the slot rendering to show lab status
-  const renderTeacherSlot = (slot: any) => {
+  const renderTeacherSlot = (slot: TeacherScheduleSlot | null) => {
     if (!slot) return null;
     
     return (
@@ -164,7 +179,6 @@ export default function TimetableView({
     );
   };
 
-
   if (view === 'teacher') {
     return (
       <div className="space-y-8">
@@ -176,7 +190,7 @@ export default function TimetableView({
               <CardHeader className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white p-6">
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <GraduationCap className="h-6 w-6" />
-                  {teacher.name}'s Schedule
+                  {teacher.name}&apos;s Schedule
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">

@@ -13,11 +13,11 @@ interface ClassFormProps {
   onSubmit: (classData: Omit<Class, 'id'>) => void;
   subjects: Subject[];
   rooms: Room[];
-  existingClasses: Class[]; // Add this to check room allocation
+  existingClasses: Class[];
 }
 
 export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }: ClassFormProps) {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<Omit<Class, 'id'>>();
+  const { register, handleSubmit, reset } = useForm<Omit<Class, 'id'>>();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [labs, setLabs] = useState<{ subject_id: string; duration: number }[]>([]);
@@ -82,7 +82,6 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmitForm)}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Class Name Input - 2 columns */}
             <div className="lg:col-span-2">
               <Label htmlFor="className" className="text-sm font-semibold text-gray-700">
                 Class Name
@@ -95,8 +94,6 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
               />
             </div>
 
-            {/* Room Selection - 3 columns */}
-            {/* Updated Room Selection with availability check */}
             <div className="lg:col-span-3">
               <Label className="text-sm font-semibold text-gray-700">Assigned Room</Label>
               <Select onValueChange={setSelectedRoom} value={selectedRoom}>
@@ -122,7 +119,6 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
               )}
             </div>
 
-            {/* Subject Selection - 4 columns */}
             <div className="lg:col-span-4">
               <Label className="text-sm font-semibold text-gray-700">Add Subjects</Label>
               <Select
@@ -147,7 +143,6 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
               </Select>
             </div>
 
-            {/* Selected Subjects Display - 3 columns */}
             <div className="lg:col-span-3">
               <Label className="text-sm font-semibold text-gray-700 mb-1 block">Selected Subjects</Label>
               <div className="space-y-2 max-h-24 overflow-y-auto">
@@ -196,7 +191,6 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
             </div>
           </div>
 
-          {/* Submit Button */}
           <div className="mt-6">
             <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
               Create Class

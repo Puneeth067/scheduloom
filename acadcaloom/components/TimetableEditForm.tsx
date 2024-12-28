@@ -22,8 +22,8 @@ interface TimetableEditFormProps {
 
 export default function TimetableEditForm({ 
   timetable, 
-  subjects, 
-  teachers, 
+  subjects,
+  teachers,
   classes,
   rooms,
   onSave, 
@@ -36,10 +36,9 @@ export default function TimetableEditForm({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
 
   useEffect(() => {
-    // Ensure we're working with the correct is_lab property format
     const normalizedSlots = timetable.slots.map(slot => ({
       ...slot,
-      is_lab: Boolean(slot.is_lab), // Ensure boolean type
+      is_lab: Boolean(slot.is_lab),
     }));
 
     setEditedTimetable({
@@ -54,12 +53,12 @@ export default function TimetableEditForm({
       .filter(c => c.id !== timetable.class_id)
       .map(c => c.room_id);
     
-    const availableRooms = rooms.filter(room => 
+    const filteredRooms = rooms.filter(room => 
       !otherClassRooms.includes(room.id) || 
       currentClass?.room_id === room.id
     );
-    setAvailableRooms(availableRooms);
-  }, [timetable, classes, rooms]);
+    setAvailableRooms(filteredRooms);
+  }, [timetable, classes, rooms, currentClass]);
 
   const handleSlotChange = (day: string, period: number, subject_id: string | null, is_lab: boolean) => {
     const updatedSlots = editedTimetable.slots.map(slot => {
@@ -67,7 +66,7 @@ export default function TimetableEditForm({
         return { 
           ...slot, 
           subject_id, 
-          is_lab // Ensure is_lab is included in the update
+          is_lab
         };
       }
       return slot;
@@ -79,7 +78,6 @@ export default function TimetableEditForm({
     try {
       if (!currentClass) return;
 
-      // Update the class with the new room
       await dataService.updateClass(currentClass.id, {
         ...currentClass,
         room_id: roomId
@@ -90,7 +88,6 @@ export default function TimetableEditForm({
         description: "Room updated successfully",
       });
 
-      // Update local state
       setCurrentClass({
         ...currentClass,
         room_id: roomId
@@ -116,7 +113,6 @@ export default function TimetableEditForm({
   const handleSave = async () => {
     try {
       if (editedTimetable.id) {
-        // Ensure all slots have the correct is_lab property before saving
         const normalizedSlots = editedTimetable.slots.map(slot => ({
           ...slot,
           is_lab: Boolean(slot.is_lab),
@@ -152,17 +148,16 @@ export default function TimetableEditForm({
       setIsDeleting(true);
       if (editedTimetable.id) {
         await dataService.deleteTimetable(editedTimetable.id);
+        await dataService.deleteClass(editedTimetable.class_id);
+        onDelete(editedTimetable.id);
+        toast({
+          title: "Success",
+          description: "Timetable and associated class deleted successfully",
+        });
+        window.location.reload();
       } else {
         throw new Error('Timetable ID is undefined');
       }
-      await dataService.deleteClass(editedTimetable.class_id);
-      
-      onDelete(editedTimetable.id);
-      toast({
-        title: "Success",
-        description: "Timetable and associated class deleted successfully",
-      });
-      window.location.reload();
     } catch (error) {
       console.error('Error deleting timetable and class:', error);
       toast({
