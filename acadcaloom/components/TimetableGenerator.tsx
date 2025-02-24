@@ -1,16 +1,17 @@
 'use client'
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+// import {useRef} from 'react';
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+// import { Textarea } from '@/components/ui/textarea'
 import { Subject, Teacher, Class, Timetable, Room, DAYS, PERIODS_PER_DAY } from '../types'
 import { generateRandomColor } from '../utils/colorGenerator'
 import { generateTimetables } from '../utils/geneticAlgorithm'
-import { parseExcelFile } from '../utils/excelParser'
+// import { parseExcelFile } from '../utils/excelParser'
 import SubjectForm from './SubjectForm'
 import TeacherForm from './TeacherForm'
 import ClassForm from './ClassForm'
@@ -43,11 +44,11 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
   const [loading, setLoading] = useState(false)
   const [selectedView, setSelectedView] = useState<'teacher' | 'student'>('student')
   const [selectedClass, setSelectedClass] = useState<string | null>(null)
-  const [bulkUploadData, setBulkUploadData] = useState('')
+  // const [bulkUploadData, setBulkUploadData] = useState('')
   const [editingTimetable, setEditingTimetable] = useState<Timetable | null>(null)
   const [editingSlot, setEditingSlot] = useState<{ class_id: string; day: string; period: number } | null>(null)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -390,118 +391,118 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
     }
   };
 
-  const handleBulkUpload = () => {
-    try {
-      const data = JSON.parse(bulkUploadData)
-      if (data.subjects) setSubjects(data.subjects)
-      if (data.teachers) setTeachers(data.teachers)
-      if (data.classes) setClasses(data.classes)
-      if (data.timetables) setTimetables(data.timetables)
-      setBulkUploadData('')
-    } catch (error) {
-      console.error('Error parsing bulk upload data:', error)
-      alert('Invalid JSON format. Please check your input and try again.')
-    }
-  }
+  // const handleBulkUpload = () => {
+  //   try {
+  //     const data = JSON.parse(bulkUploadData)
+  //     if (data.subjects) setSubjects(data.subjects)
+  //     if (data.teachers) setTeachers(data.teachers)
+  //     if (data.classes) setClasses(data.classes)
+  //     if (data.timetables) setTimetables(data.timetables)
+  //     setBulkUploadData('')
+  //   } catch (error) {
+  //     console.error('Error parsing bulk upload data:', error)
+  //     alert('Invalid JSON format. Please check your input and try again.')
+  //   }
+  // }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      try {
-        const { subjects, teachers, classes, timetables } = await parseExcelFile(file)
-        setSubjects(subjects)
-        setTeachers(teachers)
-        setClasses(classes)
-        setTimetables(timetables)
-      } catch (error) {
-        console.error('Error parsing Excel file:', error)
-        alert('Error parsing Excel file. Please check the file format and try again.')
-      }
-    }
-  }
+  // const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0]
+  //   if (file) {
+  //     try {
+  //       const { subjects, teachers, classes, timetables } = await parseExcelFile(file)
+  //       setSubjects(subjects)
+  //       setTeachers(teachers)
+  //       setClasses(classes)
+  //       setTimetables(timetables)
+  //     } catch (error) {
+  //       console.error('Error parsing Excel file:', error)
+  //       alert('Error parsing Excel file. Please check the file format and try again.')
+  //     }
+  //   }
+  // }
 
-  const getSampleData = () => {
-    const sampleData = {
-      subjects: [
-        { 
-          id: 'subject_1', 
-          name: 'Mathematics', 
-          color: '#FF5733', 
-          teacher_id: 'teacher_1',
-          user_id: session?.user?.id,
-          constraints: { 'Monday': { start: 1, end: 4 } },
-          created_at: new Date().toISOString()
-        },
-        { 
-          id: 'subject_2', 
-          name: 'Physics', 
-          color: '#33FF57', 
-          teacher_id: 'teacher_2',
-          user_id: session?.user?.id,
-          constraints: { 'Tuesday': { start: 5, end: 8 } },
-          created_at: new Date().toISOString()
-        },
-      ],
-      teachers: [
-        { 
-          id: 'teacher_1', 
-          name: 'John Doe',
-          user_id: session?.user?.id,
-          constraints: { 'Monday': { start: 1, end: 6 } },
-          created_at: new Date().toISOString()
-        },
-        { 
-          id: 'teacher_2', 
-          name: 'Jane Smith',
-          user_id: session?.user?.id,
-          constraints: { 'Tuesday': { start: 3, end: 8 } },
-          created_at: new Date().toISOString()
-        },
-      ],
-      classes: [
-        { 
-          id: 'class_1', 
-          name: 'Class 10A',
-          user_id: session?.user?.id,
-          subjects: ['subject_1', 'subject_2'],
-          labs: [],
-          created_at: new Date().toISOString()
-        },
-      ],
-      timetables: [
-        {
-          id: 'timetable_1',
-          class_id: 'class_1',
-          user_id: session?.user?.id,
-          slots: DAYS.flatMap(day =>
-            Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
-              if (period === 2 || period === 4) {
-                return {
-                  day,
-                  period,
-                  subject_id: null,
-                  is_lab: false,
-                  is_interval: true
-                }
-              }
-              const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2
-              return {
-                day,
-                period: adjustedPeriod,
-                subject_id: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
-                is_lab: false,
-                is_interval: false
-              }
-            })
-          ),
-          created_at: new Date().toISOString()
-        },
-      ],
-    }
+  // const getSampleData = () => {
+  //   const sampleData = {
+  //     subjects: [
+  //       { 
+  //         id: 'subject_1', 
+  //         name: 'Mathematics', 
+  //         color: '#FF5733', 
+  //         teacher_id: 'teacher_1',
+  //         user_id: session?.user?.id,
+  //         constraints: { 'Monday': { start: 1, end: 4 } },
+  //         created_at: new Date().toISOString()
+  //       },
+  //       { 
+  //         id: 'subject_2', 
+  //         name: 'Physics', 
+  //         color: '#33FF57', 
+  //         teacher_id: 'teacher_2',
+  //         user_id: session?.user?.id,
+  //         constraints: { 'Tuesday': { start: 5, end: 8 } },
+  //         created_at: new Date().toISOString()
+  //       },
+  //     ],
+  //     teachers: [
+  //       { 
+  //         id: 'teacher_1', 
+  //         name: 'John Doe',
+  //         user_id: session?.user?.id,
+  //         constraints: { 'Monday': { start: 1, end: 6 } },
+  //         created_at: new Date().toISOString()
+  //       },
+  //       { 
+  //         id: 'teacher_2', 
+  //         name: 'Jane Smith',
+  //         user_id: session?.user?.id,
+  //         constraints: { 'Tuesday': { start: 3, end: 8 } },
+  //         created_at: new Date().toISOString()
+  //       },
+  //     ],
+  //     classes: [
+  //       { 
+  //         id: 'class_1', 
+  //         name: 'Class 10A',
+  //         user_id: session?.user?.id,
+  //         subjects: ['subject_1', 'subject_2'],
+  //         labs: [],
+  //         created_at: new Date().toISOString()
+  //       },
+  //     ],
+  //     timetables: [
+  //       {
+  //         id: 'timetable_1',
+  //         class_id: 'class_1',
+  //         user_id: session?.user?.id,
+  //         slots: DAYS.flatMap(day =>
+  //           Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
+  //             if (period === 2 || period === 4) {
+  //               return {
+  //                 day,
+  //                 period,
+  //                 subject_id: null,
+  //                 is_lab: false,
+  //                 is_interval: true
+  //               }
+  //             }
+  //             const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2
+  //             return {
+  //               day,
+  //               period: adjustedPeriod,
+  //               subject_id: Math.random() > 0.5 ? 'subject_1' : 'subject_2',
+  //               is_lab: false,
+  //               is_interval: false
+  //             }
+  //           })
+  //         ),
+  //         created_at: new Date().toISOString()
+  //       },
+  //     ],
+  //   }
   
-    const userJson = JSON.stringify(sampleData, null, 2)
-    setBulkUploadData(userJson)
-  }
+  //   const userJson = JSON.stringify(sampleData, null, 2)
+  //   setBulkUploadData(userJson)
+  // }
 
   const startEditingTimetable = (timetable: Timetable) => {
     setEditingTimetable(timetable)
@@ -642,7 +643,7 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
           />
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        {/* <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Bulk Upload</h2>
           <Textarea
             value={bulkUploadData}
@@ -674,8 +675,8 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
           className="hidden-input"
           aria-label="Upload Excel file"
           title="Upload Excel file"
-        />
-      </div>
+        /> */}
+      </div> 
 
       <Card className="w-full max-w-6xl mx-auto bg-white shadow-lg mb-6">
         <CardContent className="pt-6 pb-6">
