@@ -12,6 +12,9 @@ interface TimetableViewProps {
   classes: Class[];
   rooms: Room[];
   view: 'student' | 'teacher';
+  onEditSlot: (class_id: string, day: string, period: number) => void
+  onRemoveSlot: (class_id: string, day: string, period: number) => void
+  onRemoveTimetable: (class_id: string) => void
 }
 
 
@@ -130,13 +133,13 @@ export default function TimetableView({
     );
   };
 
-  const renderCell = (slot: any, timetable: Timetable) => {
+  const renderCell = (slot: { is_interval: boolean; subject_id: string | null; is_lab: boolean } | null, timetable: Timetable) => {
     if (!slot || slot.is_interval) return null;
-
+  
     const classData = classes.find(c => c.id === timetable.class_id);
     const roomInfo = classData ? getRoomInfo(classData.room_id) : null;
     const teacherName = getTeacherName(slot.subject_id);
-
+  
     return (
       <div className="p-2 space-y-2">
         {slot && !slot.is_interval && (
@@ -144,7 +147,7 @@ export default function TimetableView({
             <div className="space-y-1">
               <div className="font-medium text-gray-700 flex items-center gap-2">
                 {getSubjectName(slot.subject_id)}
-                {slot.is_lab && (
+                {slot.is_lab && ( // Add the beaker icon for lab hours
                   <BeakerIcon size={16} className="text-purple-600" />
                 )}
               </div>
@@ -299,7 +302,7 @@ export default function TimetableView({
                               className="transition-all duration-200"
                               style={{ backgroundColor: slot?.subject_id ? `${subjects.find(s => s.id === slot.subject_id)?.color}20` : '' }}
                             >
-                              {renderCell(slot, timetable)}
+                              {renderCell(slot || null, timetable)} {/* Render the cell content */}
                             </TableCell>
                           );
                         })}

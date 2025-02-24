@@ -21,50 +21,58 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [labs, setLabs] = useState<{ subject_id: string; duration: number }[]>([]);
-
+  // Add a state to track lab subjects
+  const [labSubjects, setLabSubjects] = useState<string[]>([]);
   const availableRooms = rooms.filter(room => 
     !existingClasses.some(cls => cls.room_id === room.id)
   );
-
-  const onSubmitForm = (data: Omit<Class, 'id'>) => {
-    if (selectedSubjects.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one subject",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!selectedRoom) {
-      toast({
-        title: "Error",
-        description: "Please select a room for the class",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    onSubmit({ 
-      ...data, 
-      subjects: selectedSubjects, 
-      labs,
-      room_id: selectedRoom 
-    });
-    reset();
-    setSelectedSubjects([]);
-    setSelectedRoom('');
-    setLabs([]);
-  };
-
-  const addLab = (subject_id: string, duration: number) => {
-    setLabs([...labs, { subject_id, duration }]);
-  };
 
   const removeSubject = (subject_id: string) => {
     setSelectedSubjects(selectedSubjects.filter(id => id !== subject_id));
     setLabs(labs.filter(lab => lab.subject_id !== subject_id));
   };
+  
+
+// Modify the toggleLab function to handle lab subjects
+const toggleLab = (subject_id: string) => {
+  if (labSubjects.includes(subject_id)) {
+    setLabSubjects(labSubjects.filter(id => id !== subject_id));
+  } else {
+    setLabSubjects([...labSubjects, subject_id]);
+  }
+};
+
+const onSubmitForm = (data: Omit<Class, 'id'>) => {
+  if (selectedSubjects.length === 0) {
+    toast({
+      title: "Error",
+      description: "Please select at least one subject",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  if (!selectedRoom) {
+    toast({
+      title: "Error",
+      description: "Please select a room for the class",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  onSubmit({ 
+    ...data, 
+    subjects: selectedSubjects,
+    labs: labSubjects.map(subject_id => ({ subject_id, duration: 2 })), // Include lab sessions
+    room_id: selectedRoom 
+  });
+  reset();
+  setSelectedSubjects([]);
+  setSelectedRoom('');
+  setLabSubjects([]);
+};
+
 
   return (
     <Card className="w-full bg-white shadow-xl border-t-4 border-t-purple-500">
@@ -148,27 +156,26 @@ export default function ClassForm({ onSubmit, subjects, rooms, existingClasses }
               <div className="space-y-2 max-h-24 overflow-y-auto">
                 {selectedSubjects.map((subject_id) => {
                   const subject = subjects.find((s) => s.id === subject_id);
-                  const hasLab = labs.some(lab => lab.subject_id === subject_id);
+                  const isLab = labSubjects.includes(subject_id);
                   
                   return (
                     <div key={subject_id} className="flex items-center justify-between p-2 rounded-lg bg-purple-50 border border-purple-100">
                       <div className="flex items-center gap-2">
                         <Book className="h-4 w-4 text-purple-600" />
                         <span className="text-sm font-medium text-purple-700">{subject?.name}</span>
-                        {hasLab && <Beaker className="h-4 w-4 text-purple-600" />}
+                        {isLab && <Beaker className="h-4 w-4 text-purple-600" />}
                       </div>
                       <div className="flex items-center gap-2">
-                        {!hasLab && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => addLab(subject_id, 2)}
-                            className="h-6 px-2 text-purple-600 hover:bg-purple-100"
-                          >
-                            <Beaker className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleLab(subject_id)}
+                          className={`h-6 px-2 ${isLab ? 'bg-purple-200 text-purple-800' : 'text-purple-600 hover:bg-purple-100'}`}
+                        >
+                          <Beaker className="h-4 w-4" />
+                          {isLab ? 'Lab Added' : 'Add Lab'}
+                        </Button>
                         <Button
                           type="button"
                           variant="ghost"

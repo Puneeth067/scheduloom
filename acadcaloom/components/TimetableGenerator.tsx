@@ -26,10 +26,12 @@ import { saveAs } from 'file-saver'
 import { Packer } from 'docx'
 import { generateTimetableDocx } from '../utils/docxUtils'
 
+import { Session } from '@supabase/supabase-js'
+
 interface TimetableGeneratorProps {
-  session: any
-  userData?: any
-  setUserData?: (data: any) => void
+  session: Session | null
+  userData?: unknown
+  setUserData?: (data: unknown) => void
 }
 
 export default function TimetableGenerator({ session, setUserData }: TimetableGeneratorProps) {
@@ -59,8 +61,8 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
       }
       
       router.push('/')
-    } catch (error: any) {
-      console.error('Logout error:', error.message)
+    } catch (error: unknown) {
+      console.error('Logout error:', error instanceof Error ? error.message : 'Unknown error occurred')
       toast({
         title: "Error",
         description: "Failed to logout. Please try again.",
@@ -107,11 +109,15 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
 
   const addSubject = async (subject: Omit<Subject, 'id' | 'color'>) => {
     try {
+      if (!session?.user?.id) {
+        throw new Error('User must be logged in to add a subject');
+      }
+
       const newSubject = {
         ...subject,
         teacher_id: subject.teacher_id,
         color: generateRandomColor(),
-        user_id: session?.user?.id
+        user_id: session.user.id
       }
       
       const createdSubject = await dataService.createSubject(newSubject)
@@ -157,6 +163,10 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
 
   const addClass = async (classData: Omit<Class, 'id'>) => {
     try {
+      if (!session?.user?.id) {
+        throw new Error('User must be logged in to add a class');
+      }
+
       const existingClass = classes.find(cls => cls.name.toLowerCase() === classData.name.toLowerCase())
       
       if (existingClass) {
@@ -170,7 +180,7 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
   
       const newClass = {
         ...classData,
-        user_id: session?.user?.id,
+        user_id: session.user.id,
         labs: classData.labs || [],
         subjects: classData.subjects || [],
       }
@@ -218,66 +228,70 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
 
   const generateTimetablesHandler = async () => {
     try {
-      setLoading(true)
-      
+      setLoading(true);
+  
       if (!classes || classes.length === 0) {
-        throw new Error("No classes found. Please add at least one class before generating timetables.")
-      }
-      
-      if (!teachers || teachers.length === 0) {
-        throw new Error("No teachers found. Please add at least one teacher before generating timetables.")
-      }
-      
-      if (!subjects || subjects.length === 0) {
-        throw new Error("No subjects found. Please add at least one subject before generating timetables.")
+        throw new Error("No classes found. Please add at least one class before generating timetables.");
       }
   
-      const existingTimetables = await dataService.getTimetables()
-      const classesWithTimetables = new Set(existingTimetables.map(t => t.class_id))
-      const classesNeedingTimetables = classes.filter(cls => !classesWithTimetables.has(cls.id))
+      if (!teachers || teachers.length === 0) {
+        throw new Error("No teachers found. Please add at least one teacher before generating timetables.");
+      }
+  
+      if (!subjects || subjects.length === 0) {
+        throw new Error("No subjects found. Please add at least one subject before generating timetables.");
+      }
+  
+      const existingTimetables = await dataService.getTimetables();
+      const classesWithTimetables = new Set(existingTimetables.map(t => t.class_id));
+      const classesNeedingTimetables = classes.filter(cls => !classesWithTimetables.has(cls.id));
   
       if (classesNeedingTimetables.length === 0) {
-        throw new Error("All classes already have timetables. Delete existing timetables first if you want to regenerate them.")
+        throw new Error("All classes already have timetables. Delete existing timetables first if you want to regenerate them.");
       }
   
       for (const cls of classesNeedingTimetables) {
         if (!cls.subjects || cls.subjects.length === 0) {
-          throw new Error(`Class ${cls.name} has no subjects assigned.`)
+          throw new Error(`Class ${cls.name} has no subjects assigned.`);
         }
-        
+  
         cls.subjects.forEach(subjectId => {
           if (!subjects.find(s => s.id === subjectId)) {
-            throw new Error(`Invalid subject reference in class ${cls.name}`)
+            throw new Error(`Invalid subject reference in class ${cls.name}`);
           }
-        })
+        });
       }
   
       subjects.forEach(subject => {
         if (!subject.teacher_id || !teachers.find(t => t.id === subject.teacher_id)) {
-          throw new Error(`Subject ${subject.name} has no valid teacher assigned.`)
+          throw new Error(`Subject ${subject.name} has no valid teacher assigned.`);
         }
-      })
+      });
   
       const generatedTimetables = generateTimetables(
-        classesNeedingTimetables, 
-        teachers, 
+        classesNeedingTimetables,
+        teachers,
         subjects,
         rooms
-      )
-      
+      );
+  
       if (!generatedTimetables || !Array.isArray(generatedTimetables)) {
-        throw new Error("Failed to generate valid timetables structure")
+        throw new Error("Failed to generate valid timetables structure");
       }
   
       generatedTimetables.forEach((timetable, index) => {
         if (!timetable || !timetable.class_id || !timetable.slots) {
-          throw new Error(`Invalid timetable generated at index ${index}`)
+          throw new Error(`Invalid timetable generated at index ${index}`);
         }
-      })
+      });
   
+      if (!session?.user?.id) {
+        throw new Error('User must be logged in to generate timetables');
+      }
+
       const adjustedTimetables = generatedTimetables.map(timetable => ({
         class_id: timetable.class_id,
-        user_id: session?.user?.id,
+        user_id: session.user.id,
         slots: DAYS.flatMap(day =>
           Array.from({ length: PERIODS_PER_DAY + 2 }, (_, period) => {
             if (period === 2 || period === 4) {
@@ -286,61 +300,95 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
                 period,
                 subject_id: null,
                 is_lab: false,
-                is_interval: true
-              }
+                is_interval: true,
+                room_id: null, // Add room_id for interval slots
+              };
             }
-            const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2
-            const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod)
+            const adjustedPeriod = period < 2 ? period : period < 4 ? period - 1 : period - 2;
+            const slot = timetable.slots.find(s => s.day === day && s.period === adjustedPeriod);
             return slot
               ? {
                   day,
                   period,
                   subject_id: slot.subject_id,
                   is_lab: slot.is_lab,
-                  is_interval: false
+                  is_interval: false,
+                  room_id: slot.room_id || null, // Ensure room_id is included
                 }
               : {
                   day,
                   period,
                   subject_id: null,
                   is_lab: false,
-                  is_interval: false
-                }
+                  is_interval: false,
+                  room_id: null, // Add room_id for empty slots
+                };
           })
         ),
-      }))
+      }));
   
       const savedTimetables = await Promise.all(
         adjustedTimetables.map(timetable => dataService.createTimetable(timetable))
-      )
+      );
   
-      const formattedTimetables = savedTimetables.map(timetable => ({
+      interface SavedSlot {
+        day: string;
+        period: number;
+        subject_id: string | null;
+        is_lab: boolean;
+        is_interval: boolean;
+        room_id: string | null;
+      }
+
+      interface SavedTimetable {
+        id: string;
+        class_id: string;
+        user_id: string;
+        slots: SavedSlot[];
+        created_at: string;
+      }
+
+      interface FormattedSlot {
+        day: string;
+        period: number;
+        subject_id: string | null;
+        is_lab: boolean;
+        is_interval: boolean;
+        room_id: string | null;
+        isLab: boolean;
+        isInterval: boolean;
+      }
+
+      interface FormattedTimetable extends Omit<SavedTimetable, 'slots'> {
+        slots: FormattedSlot[];
+      }
+
+      const formattedTimetables: FormattedTimetable[] = savedTimetables.map((timetable: SavedTimetable) => ({
         ...timetable,
-        slots: timetable.slots.map(slot => ({
+        slots: timetable.slots.map((slot: SavedSlot) => ({
           ...slot,
           isLab: slot.is_lab,
-          isInterval: slot.is_interval
-        }))
-      }))
+          isInterval: slot.is_interval,
+        })),
+      }));
   
-      setTimetables(prevTimetables => [...prevTimetables, ...formattedTimetables])
-      
+      setTimetables(prevTimetables => [...prevTimetables, ...formattedTimetables]);
+  
       toast({
         title: "Success",
         description: `Generated timetables for ${formattedTimetables.length} classes successfully`,
-      })
-  
+      });
     } catch (error) {
-      console.error('Error generating timetables:', error)
+      console.error('Error generating timetables:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to generate timetables",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBulkUpload = () => {
     try {
@@ -581,7 +629,7 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
         
         <div className="space-y-8 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <SubjectForm onSubmit={addSubject} teachers={teachers} />
+            {session?.user?.id && <SubjectForm onSubmit={addSubject} teachers={teachers} userId={session.user.id} />}
             <TeacherForm onSubmit={addTeacher} />
             <RoomForm onSubmit={addRoom} />
           </div>
@@ -623,7 +671,9 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept=".xlsx, .xls"
-          style={{ display: 'none' }}
+          className="hidden-input"
+          aria-label="Upload Excel file"
+          title="Upload Excel file"
         />
       </div>
 
@@ -746,6 +796,15 @@ export default function TimetableGenerator({ session, setUserData }: TimetableGe
             setEditingTimetable(null)
           }}
         />
+      )}
+
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+            <span className="text-lg font-medium">Please wait...</span>
+          </div>
+        </div>
       )}
 
       {editingSlot && (

@@ -43,9 +43,9 @@ export interface TimeSlot {
   day: string;
   period: number;
   subject_id: string | null;
-  room_id: string | null; // Add room allocation
   is_lab: boolean;
-  is_interval?: boolean;
+  is_interval: boolean;
+  room_id: string | null; // Ensure this field is included
 }
 
 export interface Timetable {

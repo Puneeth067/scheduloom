@@ -8,7 +8,6 @@ function generateInitialPopulation(
   const population: Timetable[] = [];
 
   for (let i = 0; i < populationSize; i++) {
-    // Generate one timetable for each class
     classes.forEach((cls) => {
       const timetable: Timetable = {
         class_id: cls.id,
@@ -22,18 +21,61 @@ function generateInitialPopulation(
               }
               return true;
             });
+
+            // For lab sessions, we need a lab room
+            const labRooms = availableRooms.filter(room => room.type === 'lab');
             
             return {
               day,
               period,
               subject_id: cls.subjects[Math.floor(Math.random() * cls.subjects.length)],
               room_id: availableRooms[Math.floor(Math.random() * availableRooms.length)]?.id || null,
-              is_lab: false,
+              is_lab: false, // Default to false
               is_interval: false
             };
           })
         ),
       };
+
+      // Add lab sessions for lab subjects
+      if (cls.labs && cls.labs.length > 0) {
+        cls.labs.forEach(lab => {
+          const availableDays = DAYS.filter(day => {
+            // Find two consecutive free periods
+            for (let i = 0; i < PERIODS_PER_DAY - 1; i++) {
+              const slot1 = timetable.slots.find(s => s.day === day && s.period === i);
+              const slot2 = timetable.slots.find(s => s.day === day && s.period === i + 1);
+              if (slot1 && slot2 && !slot1.subject_id && !slot2.subject_id) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+          if (availableDays.length > 0) {
+            const randomDay = availableDays[Math.floor(Math.random() * availableDays.length)];
+            // Find first available consecutive slots
+            for (let i = 0; i < PERIODS_PER_DAY - 1; i++) {
+              const slot1 = timetable.slots.find(s => s.day === randomDay && s.period === i);
+              const slot2 = timetable.slots.find(s => s.day === randomDay && s.period === i + 1);
+              if (slot1 && slot2 && !slot1.subject_id && !slot2.subject_id) {
+                const availableLabs = rooms.filter(room => room.type === 'lab');
+                const labRoom = availableLabs[Math.floor(Math.random() * availableLabs.length)]?.id;
+                if (labRoom) {
+                  slot1.subject_id = lab.subject_id;
+                  slot1.is_lab = true; // Mark as lab session
+                  slot1.room_id = labRoom;
+                  slot2.subject_id = lab.subject_id;
+                  slot2.is_lab = true; // Mark as lab session
+                  slot2.room_id = labRoom;
+                }
+                break;
+              }
+            }
+          }
+        });
+      }
+
       population.push(timetable);
     });
   }

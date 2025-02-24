@@ -11,14 +11,29 @@ import { Subject, Teacher, DAYS } from '../types';
 interface SubjectFormProps {
   onSubmit: (subject: Omit<Subject, 'id' | 'color'>) => void;
   teachers: Teacher[];
+  userId: string;
 }
 
-export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
-  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm<Omit<Subject, 'id' | 'color'>>({
+interface TimeConstraint {
+  day: string;
+  start: number;
+  end: number;
+}
+
+interface FormValues {
+  name: string;
+  teacher_id: string;
+  user_id: string;
+  constraints: TimeConstraint[];
+}
+
+export default function SubjectForm({ onSubmit, teachers, userId }: SubjectFormProps) {
+  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       name: '',
-      teacher_id: '', // Initialize teacher_id
-      constraints: []
+      teacher_id: '',
+      user_id: userId,
+      constraints: [] as TimeConstraint[]
     }
   });
 
@@ -27,15 +42,19 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
     name: "constraints",
   });
 
-  const onSubmitForm = (data: Omit<Subject, 'id' | 'color'>) => {
-    // Validate that a teacher is selected
+  const onSubmitForm = (data: FormValues) => {
     if (!data.teacher_id) {
       alert('Please select a teacher');
       return;
     }
-
-    console.log('Submitting subject with data:', data); // Debug log
-    onSubmit(data);
+    const transformedData = {
+      ...data,
+      constraints: data.constraints.reduce((acc, constraint) => {
+        acc[constraint.day] = { start: constraint.start, end: constraint.end };
+        return acc;
+      }, {} as { [day: string]: { start: number; end: number } | null })
+    };
+    onSubmit(transformedData);
     reset();
   };
 
@@ -75,10 +94,7 @@ export default function SubjectForm({ onSubmit, teachers }: SubjectFormProps) {
                 Assigned Teacher
               </Label>
               <Select 
-                onValueChange={(value) => {
-                  setValue('teacher_id', value);
-                  console.log('Selected teacher_id:', value); // Debug log
-                }}
+                onValueChange={(value) => setValue('teacher_id', value)}
               >
                 <SelectTrigger id="teacher_id" className="w-full">
                   <SelectValue placeholder="Select a teacher" />

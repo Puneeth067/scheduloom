@@ -11,18 +11,38 @@ interface TeacherFormProps {
   onSubmit: (teacher: Omit<Teacher, 'id'>) => void;
 }
 
-export default function TeacherForm({ onSubmit }: TeacherFormProps) {
-  const { register, handleSubmit, reset } = useForm<Omit<Teacher, 'id'>>();
+interface DayConstraint {
+  start: string;
+  end: string;
+}
 
-  const onSubmitForm = (data: Omit<Teacher, 'id'>) => {
+interface FormValues {
+  name: string;
+  constraints: {
+    [key: string]: DayConstraint;
+  };
+}
+
+export default function TeacherForm({ onSubmit }: TeacherFormProps) {
+  const { register, handleSubmit, reset } = useForm<FormValues>({
+    defaultValues: {
+      name: '',
+      constraints: DAYS.reduce((acc, day) => {
+        acc[day] = { start: '', end: '' };
+        return acc;
+      }, {} as { [key: string]: DayConstraint })
+    }
+  });
+
+  const onSubmitForm = (data: FormValues) => {
     const constraints = DAYS.reduce((acc, day) => {
       acc[day] = data.constraints[day]?.start && data.constraints[day]?.end
-        ? { start: parseInt(data.constraints[day].start), end: parseInt(data.constraints[day].end) }
+        ? { start: Number(data.constraints[day].start), end: Number(data.constraints[day].end) }
         : null;
       return acc;
     }, {} as Teacher['constraints']);
 
-    onSubmit({ ...data, constraints });
+    onSubmit({ name: data.name, constraints });
     reset();
   };
 
