@@ -44,7 +44,7 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <div className="absolute inset-0 bg-grid-slate-900/[0.04] -z-10" />
       
-      <header className="p-6 backdrop-blur-sm bg-white/50 sticky top-0 z-50">
+      <header className="p-6 backdrop-blur-sm bg-white/50 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
@@ -64,13 +64,13 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             className="flex items-center space-x-4"
           >
             <nav className="hidden md:flex space-x-6">
-              <a href="#features" className="text-gray-600 hover:text-purple-600 transition-colors">Features</a>
-              <a href="#demo" className="text-gray-600 hover:text-purple-600 transition-colors">Demo</a>
+              <a href="#features" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">Features</a>
+              <a href="#demo" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">Demo</a>
             </nav>
             <Button 
               onClick={onAuth}
-              className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-200"
-              variant="outline"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300"
+              variant="default"
             >
               Sign In
             </Button>
@@ -97,7 +97,7 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-xl text-gray-600 max-w-2xl mx-auto"
+            className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed"
           >
             Create perfect class schedules automatically with our intelligent timetable generator. Save time and eliminate conflicts effortlessly.
           </motion.p>
@@ -106,12 +106,12 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4"
+            className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 pt-4"
           >
             <Button 
               onClick={onAuth}
               size="lg"
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-200 group"
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group font-semibold"
             >
               Get Started
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -119,7 +119,7 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             <Button 
               variant="outline"
               size="lg"
-              className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-gray-900 px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-200 group"
+              className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-900 px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group border-2 border-gray-200 font-semibold"
               asChild
             >
               <a href="https://www.youtube.com/watch?v=MsONo4GRQqQ" target="_blank" rel="noopener noreferrer">
@@ -133,15 +133,19 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.6 }}
-            className="pt-8 flex items-center justify-center space-x-8 text-gray-600"
+            className="pt-8 flex flex-wrap items-center justify-center gap-8 text-gray-600"
           >
-            <div className="flex items-center">
+            <div className="flex items-center bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm">
               <Check className="w-5 h-5 text-green-500 mr-2" />
-              Easy to get started
+              <span className="font-medium">Easy to get started</span>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm">
               <Check className="w-5 h-5 text-green-500 mr-2" />
-              24/7 active
+              <span className="font-medium">24/7 active</span>
+            </div>
+            <div className="flex items-center bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm">
+              <Check className="w-5 h-5 text-green-500 mr-2" />
+              <span className="font-medium">Genetic Algorithm</span>
             </div>
           </motion.div>
         </div>
@@ -151,7 +155,7 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Everything You Need for Perfect Scheduling
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Powerful features that make timetable management a breeze
             </p>
           </div>
@@ -164,15 +168,15 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 * (index + 3) }}
               >
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1">
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 rounded-2xl h-full">
                   <CardContent className="p-6 space-y-4">
-                    <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
                       {feature.icon}
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="text-xl font-bold text-gray-900">
                       {feature.title}
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 leading-relaxed">
                       {feature.description}
                     </p>
                   </CardContent>
@@ -187,27 +191,44 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Sneak Peek into Our App
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Check out the demo screens to see how AcademicCal Pro works
             </p>
           </div>
 
-          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm p-8">
+          <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm p-8 rounded-2xl">
             <Tabs defaultValue="schedule" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
-                <TabsTrigger value="schedule">Class Schedule</TabsTrigger>
-                <TabsTrigger value="dashboard">Teacher Dashboard</TabsTrigger>
-                <TabsTrigger value="management">Subject Management</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 mb-8 bg-gray-100/50 p-1 rounded-xl">
+                <TabsTrigger 
+                  value="schedule" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow rounded-lg font-semibold"
+                >
+                  Class Schedule
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="dashboard" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow rounded-lg font-semibold"
+                >
+                  Teacher Dashboard
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="management" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow rounded-lg font-semibold"
+                >
+                  Subject Management
+                </TabsTrigger>
               </TabsList>
               {demoScreens.map((screen, index) => (
                 <TabsContent key={index} value={["schedule", "dashboard", "management"][index]}>
-                  <Image 
-                    src={screen.image} 
-                    alt={screen.title}
-                    width={1200}
-                    height={675}
-                    className="rounded-lg shadow-lg w-full"
-                  />
+                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-lg">
+                    <Image 
+                      src={screen.image} 
+                      alt={screen.title}
+                      width={1200}
+                      height={675}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
                 </TabsContent>
               ))}
             </Tabs>
@@ -215,44 +236,85 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
         </section>
       </main>
 
-      <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200 py-12">
+      <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <Calendar className="w-6 h-6 text-purple-600" />
-                <span className="font-bold text-gray-900">AcademicCal Pro</span>
+                <Calendar className="w-8 h-8 text-purple-400" />
+                <span className="text-2xl font-bold">AcademicCal Pro</span>
               </div>
-              <p className="text-gray-600">A smart solution for academic timetable management</p>
-              <div className="mt-4 flex space-x-4">
-                <a href="https://github.com/puneeth067/scheduloom" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-purple-600">
+              <p className="text-gray-300 mb-4 max-w-md">
+                A smart solution for academic timetable management using advanced algorithms and modern web technologies.
+              </p>
+              <div className="flex space-x-4">
+                <a href="https://github.com/puneeth067/scheduloom" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path fillRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" clipRule="evenodd" />
                   </svg>
                 </a>
+                <a href="https://scheduloom-one.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white transition-colors font-medium">
+                  Live App
+                </a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Project Features</h4>
-              <ul className="space-y-2 text-gray-600">
-                <li>Smart Scheduling</li>
-                <li>Multi-User Support</li>
-                <li>Subject Management</li>
-                <li>Teacher Allocation</li>
+              <h4 className="font-bold text-lg mb-4">Project Features</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-center">
+                  <Check className="w-4 h-4 text-green-400 mr-2" />
+                  Smart Scheduling
+                </li>
+                <li className="flex items-center">
+                  <Check className="w-4 h-4 text-green-400 mr-2" />
+                  Multi-User Support
+                </li>
+                <li className="flex items-center">
+                  <Check className="w-4 h-4 text-green-400 mr-2" />
+                  Subject Management
+                </li>
+                <li className="flex items-center">
+                  <Check className="w-4 h-4 text-green-400 mr-2" />
+                  Teacher Allocation
+                </li>
+                <li className="flex items-center">
+                  <Check className="w-4 h-4 text-green-400 mr-2" />
+                  Genetic Algorithm
+                </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Technologies Used</h4>
-              <ul className="space-y-2 text-gray-600">
-                <li>NextJS + TypeScript</li>
-                <li>Tailwind CSS</li>
-                <li>Node.js</li>
-                <li>Supabase</li>
+              <h4 className="font-bold text-lg mb-4">Technologies Used</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  Next.js 14
+                </li>
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  TypeScript
+                </li>
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  Tailwind CSS
+                </li>
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  Supabase
+                </li>
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  Genetic Algorithms
+                </li>
+                <li className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  Framer Motion
+                </li>
               </ul>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-600">
-            <p>© 2024 College Timetable Generator - AcademicCal Pro</p>
+          <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
+            © 2024 College Timetable Generator - AcademicCal Pro 
           </div>
         </div>
       </footer>
