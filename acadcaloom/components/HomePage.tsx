@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Users, BookOpen, ArrowRight, Check, Play } from 'lucide-react';
+import { Calendar, Clock, Users, BookOpen, ArrowRight, Check, Play, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,8 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
   const features = [
     {
       icon: <Calendar className="w-6 h-6 text-purple-500" />,
@@ -120,12 +122,10 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
               variant="outline"
               size="lg"
               className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-900 px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group border-2 border-gray-200 font-semibold"
-              asChild
+              onClick={() => setIsVideoModalOpen(true)}
             >
-              <a href="https://www.youtube.com/watch?v=MsONo4GRQqQ" target="_blank" rel="noopener noreferrer">
-                Watch Demo
-                <Play className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
-              </a>
+              Watch Demo
+              <Play className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
             </Button>
           </motion.div>
 
@@ -235,6 +235,31 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
           </Card>
         </section>
       </main>
+
+      {/* YouTube Video Modal */}
+      {isVideoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-4xl mx-4">
+            <Button
+              onClick={() => setIsVideoModalOpen(false)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300"
+              variant="ghost"
+              size="icon"
+            >
+              <X className="w-8 h-8" />
+            </Button>
+            <div className="aspect-video rounded-lg overflow-hidden shadow-2xl">
+              <iframe
+                src="https://www.youtube.com/embed/MsONo4GRQqQ"
+                title="AcademicCal Pro Demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-6">
