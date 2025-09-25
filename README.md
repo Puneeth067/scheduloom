@@ -1,3 +1,4 @@
+
 # AcademicCal Pro - College Timetable Generator
 
 AcademicCal Pro is an intelligent timetable generator for educational institutions that automatically creates conflict-free schedules using genetic algorithms. Built with Next.js, TypeScript, and Supabase, it provides an efficient solution for managing complex academic scheduling needs.
