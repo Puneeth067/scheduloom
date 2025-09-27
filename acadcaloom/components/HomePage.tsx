@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, Users, BookOpen, ArrowRight, Check, Play, X } from 'lucide-react';
+import { Calendar, Clock, Users, BookOpen, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,6 @@ interface HomePageProps {
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   const features = [
     {
@@ -66,8 +65,8 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             className="flex items-center space-x-4"
           >
             <nav className="hidden md:flex space-x-6">
+              <a href="#video-demo" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">Demo</a>
               <a href="#features" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">Features</a>
-              <a href="#demo" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">Demo</a>
             </nav>
             <Button 
               onClick={onAuth}
@@ -118,15 +117,6 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
               Get Started
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button 
-              variant="outline"
-              size="lg"
-              className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-900 px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group border-2 border-gray-200 font-semibold"
-              onClick={() => setIsVideoModalOpen(true)}
-            >
-              Watch Demo
-              <Play className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
-            </Button>
           </motion.div>
 
           <motion.div
@@ -149,6 +139,31 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
             </div>
           </motion.div>
         </div>
+
+        <section id="video-demo" className="mt-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              See It In Action
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Watch our demo to see how AcademicCal Pro transforms timetable management
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+              <div className="aspect-video rounded-xl overflow-hidden">
+                <iframe
+                  src="https://www.youtube.com/embed/MsONo4GRQqQ"
+                  title="AcademicCal Pro Demo"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                ></iframe>
+              </div>
+            </Card>
+          </div>
+        </section>
 
         <section id="features" className="mt-32">
           <div className="text-center mb-16">
@@ -237,30 +252,6 @@ const HomePage: React.FC<HomePageProps> = ({ onAuth }) => {
       </main>
 
       {/* YouTube Video Modal */}
-      {isVideoModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="relative w-full max-w-4xl mx-4">
-            <Button
-              onClick={() => setIsVideoModalOpen(false)}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300"
-              variant="ghost"
-              size="icon"
-            >
-              <X className="w-8 h-8" />
-            </Button>
-            <div className="aspect-video rounded-lg overflow-hidden shadow-2xl">
-              <iframe
-                src="https://www.youtube.com/embed/MsONo4GRQqQ"
-                title="AcademicCal Pro Demo"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      )}
-
       <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
